@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}CSV import · PhishGuard{% endblock %}
+{% block page_title %}İştirakçıları CSV ilə import et{% endblock %}
+
+{% block content %}
+<section class="panel panel-narrow">
+    {% if done %}
+    <div class="import-result">
+        <div class="import-stat ok"><span>{{ imported }}</span>əlavə olundu</div>
+        <div class="import-stat warn"><span>{{ skipped }}</span>dublikat (keçildi)</div>
+        <div class="import-stat err"><span>{{ errors }}</span>xəta</div>
+    </div>
+    {% if error_rows %}
+    <table class="table-clean">
+        <thead><tr><th>Sətir</th><th>Problem</th></tr></thead>
+        <tbody>
+        {% for line_no, reason in error_rows %}
+            <tr><td>{{ line_no }}</td><td>{{ reason }}</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+    <p><a href="{{ url_for('participants.index') }}" class="btn btn-primary">İştirakçılara qayıt</a></p>
+    <hr>
+    {% endif %}
+
+    <p class="muted">CSV faylında bu sütunlar olmalıdır (başlıq sətri ilə):</p>
+    <code class="code-block">{{ columns | join(", ") }}</code>
+    <p><a href="{{ url_for('participants.sample_csv') }}">
+        <i class="bi bi-download"></i> Nümunə CSV faylını yüklə</a></p>
+
+    <form method="post" enctype="multipart/form-data" novalidate class="upload-form">
+        {{ form.hidden_tag() }}
+        <div class="form-group">
+            {{ form.file.label(class="form-label") }}
+            {{ form.file(class="form-control") }}
+            {% for e in form.file.errors %}<small class="field-error">{{ e }}</small>{% endfor %}
+        </div>
+        {{ form.submit(class="btn btn-primary") }}
+    </form>
+</section>
+{% endblock %}

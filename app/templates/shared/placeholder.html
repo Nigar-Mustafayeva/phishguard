@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · PhishGuard{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="empty-state">
+    <i class="bi bi-cone-striped empty-icon"></i>
+    <h2>{{ title }}</h2>
+    <p class="muted">{{ desc }}</p>
+    <span class="stage-chip">{{ stage }}-də qurulacaq</span>
+</div>
+{% endblock %}

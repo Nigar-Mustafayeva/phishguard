@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Şablonlar · PhishGuard{% endblock %}
+{% block page_title %}Email Şablonları{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <span class="muted">{{ templates|length }} şablon</span>
+    <a href="{{ url_for('templates_bp.create') }}" class="btn btn-primary">
+        <i class="bi bi-plus-lg"></i> Yeni şablon
+    </a>
+</div>
+
+<section class="panel">
+    {% if templates %}
+    <table class="table-clean">
+        <thead><tr><th>Ad</th><th>Mövzu</th><th>Kateqoriya</th><th>Növ</th><th></th></tr></thead>
+        <tbody>
+        {% for t in templates %}
+            <tr>
+                <td><a href="{{ url_for('templates_bp.preview', tid=t.id) }}">{{ t.name }}</a></td>
+                <td class="muted">{{ t.subject }}</td>
+                <td>{% if t.category %}<span class="status status-qaralama">{{ t.category }}</span>{% endif %}</td>
+                <td>{% if t.is_demo %}<span class="status status-qaralama">demo</span>
+                    {% else %}<span class="status status-aktiv">real</span>{% endif %}</td>
+                <td class="row-actions">
+                    <a href="{{ url_for('templates_bp.preview', tid=t.id) }}" class="icon-link" title="Önizləmə"><i class="bi bi-eye"></i></a>
+                    <a href="{{ url_for('templates_bp.edit', tid=t.id) }}" class="icon-link" title="Redaktə"><i class="bi bi-pencil"></i></a>
+                    {% if current_user.is_admin %}
+                    <form method="post" action="{{ url_for('templates_bp.delete', tid=t.id) }}"
+                          onsubmit="return confirm('Bu şablonu silmək istədiyinizə əminsiniz?');" style="display:inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="icon-link danger" title="Sil"><i class="bi bi-trash"></i></button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <i class="bi bi-envelope-paper empty-icon"></i>
+        <h2>Hələ şablon yoxdur</h2>
+        <p class="muted">İlk phishing email şablonunu yaradın.</p>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

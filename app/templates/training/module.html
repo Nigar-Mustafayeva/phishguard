@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}{{ mod.title }} · PhishGuard{% endblock %}
+{% block page_title %}{{ mod.title }}{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <a href="{{ url_for('training.index') }}" class="btn btn-outline">← Təlim modulları</a>
+</div>
+
+<section class="panel panel-narrow">
+    <div class="panel-head"><h2>Məqalə</h2></div>
+    <div class="article">{{ mod.content | replace("\n", "<br>") | safe }}</div>
+</section>
+
+{% if results is none %}
+<!-- Quiz form -->
+<section class="panel panel-narrow">
+    <div class="panel-head"><h2>Quiz</h2></div>
+    <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% for q, options in questions_opts %}
+        <div class="quiz-q">
+            <p class="quiz-question">{{ loop.index }}. {{ q.question }}</p>
+            {% for key, text in options %}
+            <label class="quiz-option">
+                <input type="radio" name="q{{ q.id }}" value="{{ key }}" required>
+                <span>{{ text }}</span>
+            </label>
+            {% endfor %}
+        </div>
+        {% endfor %}
+        <button class="btn btn-primary" type="submit">Cavabları yoxla</button>
+    </form>
+</section>
+{% else %}
+<!-- Graded results -->
+<section class="panel panel-narrow">
+    <div class="score-banner {{ 'good' if score == total else 'partial' }}">
+        Nəticə: <strong>{{ score }}/{{ total }}</strong>
+        {% if score == total %} — əla!{% endif %}
+    </div>
+    {% for r in results %}
+    <div class="quiz-q">
+        <p class="quiz-question">{{ loop.index }}. {{ r.q.question }}</p>
+        {% for key, text in r.options %}
+            <div class="quiz-review
+                {% if key == r.q.correct_option %}correct{% elif key == r.chosen %}wrong{% endif %}">
+                {% if key == r.q.correct_option %}<i class="bi bi-check-circle"></i>
+                {% elif key == r.chosen %}<i class="bi bi-x-circle"></i>
+                {% else %}<i class="bi bi-circle"></i>{% endif %}
+                {{ text }}
+            </div>
+        {% endfor %}
+        <div class="explanation"><i class="bi bi-lightbulb"></i> {{ r.q.explanation }}</div>
+    </div>
+    {% endfor %}
+    <a href="{{ url_for('training.module', slug=mod.slug) }}" class="btn btn-outline">Yenidən cəhd et</a>
+    <a href="{{ url_for('training.index') }}" class="btn btn-primary">Təlim modulları</a>
+</section>
+{% endif %}
+{% endblock %}

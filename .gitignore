@@ -1,0 +1,26 @@
+# Secrets
+.env
+*.env
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Local database files (may contain private data)
+*.db
+*.sqlite
+*.sqlite3
+instance/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/

@@ -1,0 +1,42 @@
+# Render Blueprint — deploys a web service + a managed PostgreSQL database.
+# Create the service by connecting this repo in the Render dashboard
+# ("New +" -> "Blueprint"). Secrets are set as environment variables, never
+# committed to the repo.
+
+databases:
+  - name: phishguard-db
+    plan: free
+    databaseName: phishguard
+    user: phishguard
+
+services:
+  - type: web
+    name: phishguard
+    runtime: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "bash start.sh"
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      - key: FLASK_APP
+        value: run.py
+      - key: FLASK_CONFIG
+        value: production
+      - key: SECRET_KEY
+        generateValue: true          # Render generates a strong random value
+      - key: DEMO_MODE
+        value: "true"                # public demo stays safe (no real email)
+      - key: SEED_DEMO
+        value: "true"                # seed synthetic data on first deploy
+      - key: DATABASE_URL
+        fromDatabase:
+          name: phishguard-db
+          property: connectionString
+      # Set these two in the Render dashboard (marked sync:false so they are
+      # NOT read from this file) to create the first admin login:
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false

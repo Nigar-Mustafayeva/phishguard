@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}İştirakçılar · PhishGuard{% endblock %}
+{% block page_title %}İştirakçılar{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <span class="muted">{{ participants|length }} iştirakçı</span>
+    <div class="toolbar-actions">
+        <a href="{{ url_for('participants.import_csv') }}" class="btn btn-outline">
+            <i class="bi bi-upload"></i> CSV import
+        </a>
+        <a href="{{ url_for('participants.create') }}" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> Yeni iştirakçı
+        </a>
+    </div>
+</div>
+
+<section class="panel">
+    {% if participants %}
+    <table class="table-clean">
+        <thead>
+            <tr><th>Ad Soyad</th><th>Email</th><th>Şöbə</th><th>Növ</th><th></th></tr>
+        </thead>
+        <tbody>
+        {% for p in participants %}
+            <tr>
+                <td>{{ p.full_name }}</td>
+                <td>{{ p.email }}</td>
+                <td>{{ p.department.name if p.department else "—" }}</td>
+                <td>{% if p.is_demo %}<span class="status status-qaralama">demo</span>
+                    {% else %}<span class="status status-aktiv">real</span>{% endif %}</td>
+                <td class="row-actions">
+                    <a href="{{ url_for('participants.edit', pid=p.id) }}"
+                       class="icon-link" title="Redaktə"><i class="bi bi-pencil"></i></a>
+                    {% if current_user.is_admin %}
+                    <form method="post" action="{{ url_for('participants.delete', pid=p.id) }}"
+                          onsubmit="return confirm('Bu iştirakçını silmək istədiyinizə əminsiniz?');"
+                          style="display:inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="icon-link danger" title="Sil">
+                            <i class="bi bi-trash"></i></button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <i class="bi bi-people empty-icon"></i>
+        <h2>Hələ iştirakçı yoxdur</h2>
+        <p class="muted">İştirakçı əlavə edin və ya CSV faylı import edin.</p>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

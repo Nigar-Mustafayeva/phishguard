@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Kampaniyalar · PhishGuard{% endblock %}
+{% block page_title %}Kampaniyalar{% endblock %}
+
+{% macro status_badge(s) %}
+    {% if s == "active" %}<span class="status status-aktiv">Aktiv</span>
+    {% elif s == "completed" %}<span class="status status-tamamlandı">Tamamlandı</span>
+    {% elif s == "stopped" %}<span class="status status-qaralama">Dayandırıldı</span>
+    {% else %}<span class="status status-qaralama">Qaralama</span>{% endif %}
+{% endmacro %}
+
+{% block content %}
+<div class="toolbar">
+    <span class="muted">{{ campaigns|length }} kampaniya</span>
+    <a href="{{ url_for('campaigns.create') }}" class="btn btn-primary">
+        <i class="bi bi-plus-lg"></i> Yeni kampaniya
+    </a>
+</div>
+
+<section class="panel">
+    {% if campaigns %}
+    <table class="table-clean">
+        <thead><tr><th>Ad</th><th>Status</th><th>Şablon</th><th>İştirakçı</th><th></th></tr></thead>
+        <tbody>
+        {% for c in campaigns %}
+            <tr>
+                <td><a href="{{ url_for('campaigns.detail', cid=c.id) }}">{{ c.name }}</a></td>
+                <td>{{ status_badge(c.status) }}</td>
+                <td class="muted">{{ c.template.name if c.template else "—" }}</td>
+                <td>{{ c.participants|length }}</td>
+                <td class="row-actions">
+                    <a href="{{ url_for('campaigns.detail', cid=c.id) }}" class="icon-link" title="Bax"><i class="bi bi-eye"></i></a>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <i class="bi bi-send empty-icon"></i>
+        <h2>Hələ kampaniya yoxdur</h2>
+        <p class="muted">İlk simulyasiya kampaniyanı yaradın.</p>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

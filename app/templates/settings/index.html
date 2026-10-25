@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Parametrlər · PhishGuard{% endblock %}
+{% block page_title %}Parametrlər{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <span class="muted">Sistem parametrləri və istifadəçilər</span>
+    <a href="{{ url_for('settings.audit') }}" class="btn btn-outline">
+        <i class="bi bi-journal-text"></i> Audit log</a>
+</div>
+
+<div class="stat-grid">
+    <section class="panel">
+        <div class="panel-head"><h2>Konfiqurasiya</h2></div>
+        <table class="kv">
+            <tr><td>Demo rejim</td><td>{{ 'Aktiv' if config.demo_mode else 'Deaktiv' }}</td></tr>
+            <tr><td>GoPhish</td><td>{{ 'Konfiqurasiya olunub' if config.gophish_configured else 'Yoxdur' }} ({{ config.gophish.mode }})</td></tr>
+            <tr><td>Mailtrap</td><td>{{ 'Konfiqurasiya olunub' if config.mailtrap else 'Yoxdur' }}</td></tr>
+        </table>
+        <p class="muted" style="font-size:.8rem">Sirrlər (API açarı, parollar) yalnız
+            <code>.env</code> faylında saxlanılır, burada göstərilmir.</p>
+    </section>
+
+    <section class="panel">
+        <div class="panel-head"><h2>Yeni istifadəçi</h2></div>
+        <form method="post">
+            {{ form.hidden_tag() }}
+            <div class="form-group">{{ form.name.label(class="form-label") }}{{ form.name(class="form-control") }}</div>
+            <div class="form-group">{{ form.email.label(class="form-label") }}{{ form.email(class="form-control") }}
+                {% for e in form.email.errors %}<small class="field-error">{{ e }}</small>{% endfor %}</div>
+            <div class="form-row">
+                <div class="form-group">{{ form.password.label(class="form-label") }}{{ form.password(class="form-control") }}
+                    {% for e in form.password.errors %}<small class="field-error">{{ e }}</small>{% endfor %}</div>
+                <div class="form-group">{{ form.role.label(class="form-label") }}{{ form.role(class="form-control") }}</div>
+            </div>
+            {{ form.submit(class="btn btn-primary") }}
+        </form>
+    </section>
+</div>
+
+<section class="panel">
+    <div class="panel-head"><h2>İstifadəçilər</h2></div>
+    <table class="table-clean">
+        <thead><tr><th>Ad</th><th>Email</th><th>Rol</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+        {% for u in users %}
+            <tr>
+                <td>{{ u.name }}</td>
+                <td>{{ u.email }}</td>
+                <td><span class="role-tag">{{ u.role }}</span></td>
+                <td>{% if u.active %}<span class="status status-aktiv">aktiv</span>
+                    {% else %}<span class="status status-qaralama">deaktiv</span>{% endif %}</td>
+                <td class="row-actions">
+                    {% if u.id != current_user.id %}
+                    <form method="post" action="{{ url_for('settings.toggle_user', uid=u.id) }}" style="display:inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="btn btn-outline btn-sm">{{ 'Deaktiv et' if u.active else 'Aktiv et' }}</button>
+                    </form>
+                    {% else %}<span class="muted">siz</span>{% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}{{ template.name }} · Önizləmə{% endblock %}
+{% block page_title %}Şablon önizləməsi{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <span class="muted">{{ template.name }}</span>
+    <div class="toolbar-actions">
+        <a href="{{ url_for('templates_bp.index') }}" class="btn btn-outline">Siyahı</a>
+        <a href="{{ url_for('templates_bp.edit', tid=template.id) }}" class="btn btn-primary">
+            <i class="bi bi-pencil"></i> Redaktə
+        </a>
+    </div>
+</div>
+
+<div class="row-split">
+    <section class="panel">
+        <div class="panel-head">
+            <h2>Email önizləmə</h2>
+            <span class="muted">Nümunə iştirakçı datası ilə</span>
+        </div>
+        <div class="email-meta">
+            <div><span>Göndərən:</span> {{ template.sender_name }} &lt;{{ template.sender_email }}&gt;</div>
+            <div><span>Mövzu:</span> {{ template.subject }}</div>
+        </div>
+        <iframe class="email-frame" srcdoc="{{ rendered|e }}" title="Email önizləmə"></iframe>
+    </section>
+
+    <section class="panel">
+        <div class="panel-head"><h2>Test email göndər</h2></div>
+        {% if mailtrap_ok %}
+        <p class="muted">Email Mailtrap sandbox-a göndəriləcək — real alıcıya çatmır.</p>
+        {% else %}
+        <div class="demo-banner">
+            <i class="bi bi-info-circle"></i>
+            Mailtrap konfiqurasiya olunmayıb. <code>.env</code> faylında
+            <code>MAILTRAP_USERNAME</code> və <code>MAILTRAP_PASSWORD</code> təyin edin.
+        </div>
+        {% endif %}
+        <form method="post">
+            {{ form.hidden_tag() }}
+            <div class="form-group">
+                {{ form.recipient.label(class="form-label") }}
+                {{ form.recipient(class="form-control", placeholder="test@example.com") }}
+                {% for e in form.recipient.errors %}<small class="field-error">{{ e }}</small>{% endfor %}
+            </div>
+            {{ form.submit(class="btn btn-primary", disabled=not mailtrap_ok) }}
+        </form>
+    </section>
+</div>
+{% endblock %}

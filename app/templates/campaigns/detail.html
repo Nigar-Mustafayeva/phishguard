@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}{{ camp.name }} · PhishGuard{% endblock %}
+{% block page_title %}Kampaniya: {{ camp.name }}{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <div>
+        {% if camp.status == "active" %}<span class="status status-aktiv">Aktiv</span>
+        {% elif camp.status == "completed" %}<span class="status status-tamamlandı">Tamamlandı</span>
+        {% elif camp.status == "stopped" %}<span class="status status-qaralama">Dayandırıldı</span>
+        {% else %}<span class="status status-qaralama">Qaralama</span>{% endif %}
+    </div>
+    <div class="toolbar-actions">
+        {% if camp.status == STATUS_DRAFT %}
+            <a href="{{ url_for('campaigns.edit', cid=camp.id) }}" class="btn btn-outline">
+                <i class="bi bi-pencil"></i> Redaktə</a>
+            <form method="post" action="{{ url_for('campaigns.launch', cid=camp.id) }}" style="display:inline"
+                  onsubmit="return confirm('Kampaniyanı başlatmaq istədiyinizə əminsiniz?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-primary"><i class="bi bi-play-fill"></i> Başlat</button>
+            </form>
+            {% if current_user.is_admin %}
+            <form method="post" action="{{ url_for('campaigns.delete', cid=camp.id) }}" style="display:inline"
+                  onsubmit="return confirm('Bu qaralamanı silmək istədiyinizə əminsiniz?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-outline danger-btn"><i class="bi bi-trash"></i> Sil</button>
+            </form>
+            {% endif %}
+        {% elif camp.status == STATUS_ACTIVE %}
+            <form method="post" action="{{ url_for('campaigns.stop', cid=camp.id) }}" style="display:inline"
+                  onsubmit="return confirm('Kampaniyanı dayandırmaq istədiyinizə əminsiniz?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-primary"><i class="bi bi-stop-fill"></i> Dayandır</button>
+            </form>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row-split">
+    <section class="panel">
+        <div class="panel-head"><h2>Məlumat</h2></div>
+        <table class="kv">
+            <tr><td>Şablon</td><td>{{ camp.template.name if camp.template else "—" }}</td></tr>
+            <tr><td>İştirakçı sayı</td><td>{{ camp.participants|length }}</td></tr>
+            <tr><td>Yaradılıb</td><td>{{ camp.created_at.strftime("%Y-%m-%d %H:%M") }}</td></tr>
+            <tr><td>Başladılıb</td><td>{{ camp.launched_at.strftime("%Y-%m-%d %H:%M") if camp.launched_at else "—" }}</td></tr>
+        </table>
+        {% if camp.description %}<p class="muted">{{ camp.description }}</p>{% endif %}
+    </section>
+
+    <section class="panel">
+        <div class="panel-head toolbar">
+            <div>
+                <h2>Hadisə sayları</h2>
+                <span class="badge-mode {{ 'live' if gophish.mode == 'live' and gophish.reachable else 'demo' }}">
+                    {{ 'GoPhish (live)' if gophish.mode == 'live' and gophish.reachable else 'Demo rejim' }}
+                </span>
+            </div>
+            {% if camp.status != STATUS_DRAFT %}
+            <form method="post" action="{{ url_for('campaigns.sync', cid=camp.id) }}" style="display:inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-outline"><i class="bi bi-arrow-repeat"></i> Sinxronla</button>
+            </form>
+            {% endif %}
+        </div>
+        <p class="muted" style="font-size:.8rem">{{ gophish.message }}</p>
+        <div class="event-counts">
+            <div><span>{{ counts.get("sent", 0) }}</span>Göndərildi</div>
+            <div><span>{{ counts.get("opened", 0) }}</span>Açıldı</div>
+            <div><span>{{ counts.get("clicked", 0) }}</span>Kliklədi</div>
+            <div><span>{{ counts.get("submitted", 0) }}</span>Form doldurdu</div>
+            <div><span>{{ counts.get("reported", 0) }}</span>Report etdi</div>
+        </div>
+    </section>
+</div>
+
+<section class="panel">
+    <div class="panel-head"><h2>İştirakçılar</h2></div>
+    {% if camp.participants %}
+    <table class="table-clean">
+        <thead><tr><th>Ad Soyad</th><th>Email</th><th>Şöbə</th></tr></thead>
+        <tbody>
+        {% for cp in camp.participants %}
+            <tr>
+                <td>{{ cp.participant.full_name }}</td>
+                <td>{{ cp.participant.email }}</td>
+                <td>{{ cp.participant.department.name if cp.participant.department else "—" }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="muted">Bu kampaniyaya hələ iştirakçı əlavə olunmayıb.</p>
+    {% endif %}
+</section>
+{% endblock %}

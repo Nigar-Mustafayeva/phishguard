@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Audit log · PhishGuard{% endblock %}
+{% block page_title %}Audit log{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <a href="{{ url_for('settings.index') }}" class="btn btn-outline">← Parametrlər</a>
+    <form method="get" class="filter-form">
+        <select name="action" class="form-control" onchange="this.form.submit()">
+            <option value="">Bütün hərəkətlər</option>
+            {% for a in actions %}
+            <option value="{{ a }}" {{ 'selected' if a == current_action }}>{{ a }}</option>
+            {% endfor %}
+        </select>
+    </form>
+</div>
+
+<section class="panel">
+    <div class="panel-head"><h2>Son {{ logs|length }} hadisə</h2>
+        <span class="muted">Parol və API açarları heç vaxt yazılmır</span></div>
+    {% if logs %}
+    <table class="table-clean">
+        <thead><tr><th>Vaxt</th><th>İstifadəçi</th><th>Hərəkət</th><th>Detal</th><th>IP</th></tr></thead>
+        <tbody>
+        {% for l in logs %}
+            <tr>
+                <td class="muted">{{ l.created_at.strftime("%Y-%m-%d %H:%M:%S") }}</td>
+                <td>{{ user_names.get(l.user_id, "—") }}</td>
+                <td><span class="status status-qaralama">{{ l.action }}</span></td>
+                <td>{{ l.detail or "—" }}</td>
+                <td class="muted">{{ l.ip_address or "—" }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="muted">Audit qeydi yoxdur.</p>
+    {% endif %}
+</section>
+{% endblock %}

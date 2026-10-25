@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Hesabatlar · PhishGuard{% endblock %}
+{% block page_title %}Hesabatlar{% endblock %}
+
+{% block content %}
+<section class="panel">
+    <div class="panel-head"><h2>Kampaniya hesabatları</h2>
+        <span class="muted">PDF və ya CSV kimi yüklə</span></div>
+    {% if rows %}
+    <table class="table-clean">
+        <thead><tr>
+            <th>Kampaniya</th><th>Status</th><th>Göndərildi</th><th>Klik %</th>
+            <th>Report %</th><th>Növ</th><th>Yüklə</th>
+        </tr></thead>
+        <tbody>
+        {% for c, m in rows %}
+            <tr>
+                <td>{{ c.name }}</td>
+                <td class="muted">{{ c.status }}</td>
+                <td>{{ m.sent }}</td>
+                <td>{{ m.click_rate }}%</td>
+                <td>{{ m.report_rate }}%</td>
+                <td>{% if c.is_demo %}<span class="status status-qaralama">demo</span>
+                    {% else %}<span class="status status-aktiv">real</span>{% endif %}</td>
+                <td class="row-actions">
+                    <a href="{{ url_for('reports.pdf_report', cid=c.id) }}" class="btn btn-outline btn-sm">
+                        <i class="bi bi-file-earmark-pdf"></i> PDF</a>
+                    <a href="{{ url_for('reports.csv_report', cid=c.id) }}" class="btn btn-outline btn-sm">
+                        <i class="bi bi-filetype-csv"></i> CSV</a>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="muted">Hesabat üçün kampaniya yoxdur.</p>
+    {% endif %}
+</section>
+
+<section class="panel">
+    <div class="panel-head"><h2>Hesabatda nə var?</h2></div>
+    <ul class="info-list">
+        <li>Kampaniya xülasəsi və iştirakçı sayı</li>
+        <li>Hadisə sayları və hesablanmış metrikalar (klik/report/form faizi)</li>
+        <li>Əsas müşahidələr və tövsiyə olunan təlim modulları</li>
+        <li>Yaradılma tarixi və demo data işarəsi</li>
+    </ul>
+</section>
+{% endblock %}

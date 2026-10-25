@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}İnteqrasiya · PhishGuard{% endblock %}
+{% block page_title %}İnteqrasiya statusu{% endblock %}
+
+{% block content %}
+<div class="stat-grid">
+    <section class="panel">
+        <div class="panel-head toolbar">
+            <h2><i class="bi bi-hdd-network"></i> GoPhish</h2>
+            <span class="badge-mode {{ 'live' if gophish.reachable else 'demo' }}">
+                {{ 'Live' if gophish.reachable else 'Demo' }}
+            </span>
+        </div>
+        <p class="muted">{{ gophish.message }}</p>
+        <table class="kv">
+            <tr><td>Konfiqurasiya</td><td>{{ 'Var' if gophish_configured else 'Yoxdur (.env)' }}</td></tr>
+            <tr><td>Rejim</td><td>{{ gophish.mode }}</td></tr>
+            <tr><td>Əlçatan</td><td>{{ 'Bəli' if gophish.reachable else 'Xeyr' }}</td></tr>
+        </table>
+        <p class="muted" style="font-size:.8rem">
+            API açarı yalnız <code>.env</code> faylında saxlanılır, frontend-ə heç vaxt
+            ötürülmür. GoPhish olmayanda platforma demo mode-da işləyir.
+        </p>
+    </section>
+
+    <section class="panel">
+        <div class="panel-head toolbar">
+            <h2><i class="bi bi-envelope-at"></i> Mailtrap</h2>
+            <span class="badge-mode {{ 'live' if mailtrap_ok else 'demo' }}">
+                {{ 'Konfiqurasiya olunub' if mailtrap_ok else 'Yoxdur' }}
+            </span>
+        </div>
+        <p class="muted">
+            {% if mailtrap_ok %}Test emailləri Mailtrap sandbox-a göndərilə bilər.
+            {% else %}Test email göndərmək üçün <code>.env</code> faylında Mailtrap
+            məlumatlarını təyin edin.{% endif %}
+        </p>
+    </section>
+</div>
+
+<section class="panel">
+    <div class="panel-head"><h2>Rejimlər necə işləyir</h2></div>
+    <ul class="info-list">
+        <li><strong>Demo rejim</strong> — real email göndərilmir; nəticələr sintetik
+            funnel kimi yaradılır. Public demo həmişə bu rejimdədir.</li>
+        <li><strong>Live rejim</strong> — <code>DEMO_MODE=false</code> və GoPhish
+            konfiqurasiyası olduqda aktivləşir; nəticələr GoPhish API-dən sinxronlaşdırılır.</li>
+    </ul>
+</section>
+{% endblock %}

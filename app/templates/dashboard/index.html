@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · PhishGuard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% macro status_badge(s) %}
+    {% if s == "active" %}<span class="status status-aktiv">Aktiv</span>
+    {% elif s == "completed" %}<span class="status status-tamamlandı">Tamamlandı</span>
+    {% elif s == "stopped" %}<span class="status status-qaralama">Dayandırıldı</span>
+    {% else %}<span class="status status-qaralama">Qaralama</span>{% endif %}
+{% endmacro %}
+
+{% block content %}
+<div class="demo-banner">
+    <i class="bi bi-info-circle"></i>
+    Bütün rəqəmlər verilənlər bazasından hesablanır. Nümunə (demo) qeydlər
+    daxildir və platformanın digər səhifələrində <strong>demo</strong> kimi işarələnib.
+</div>
+
+<!-- Stat cards -->
+<div class="stat-grid">
+    <div class="stat-card"><div class="stat-icon bg-blue"><i class="bi bi-send"></i></div>
+        <div><div class="stat-value">{{ stats.campaigns }}</div><div class="stat-label">Kampaniya</div></div></div>
+    <div class="stat-card"><div class="stat-icon bg-teal"><i class="bi bi-people"></i></div>
+        <div><div class="stat-value">{{ stats.participants }}</div><div class="stat-label">İştirakçı</div></div></div>
+    <div class="stat-card"><div class="stat-icon bg-navy"><i class="bi bi-envelope-check"></i></div>
+        <div><div class="stat-value">{{ stats.sent }}</div><div class="stat-label">Göndərilən email</div></div></div>
+    <div class="stat-card"><div class="stat-icon bg-amber"><i class="bi bi-cursor"></i></div>
+        <div><div class="stat-value">{{ stats.click_rate }}%</div><div class="stat-label">Klik faizi</div></div></div>
+    <div class="stat-card"><div class="stat-icon bg-green"><i class="bi bi-flag"></i></div>
+        <div><div class="stat-value">{{ stats.report_rate }}%</div><div class="stat-label">Report faizi</div></div></div>
+    <div class="stat-card"><div class="stat-icon bg-red"><i class="bi bi-exclamation-triangle"></i></div>
+        <div><div class="stat-value">{{ stats.submit_rate }}%</div><div class="stat-label">Form doldurma faizi</div></div></div>
+</div>
+
+<div class="row-split">
+    <section class="panel">
+        <div class="panel-head"><h2>Kampaniyalar üzrə klik vs report</h2>
+            <span class="muted">Başladılmış kampaniyalar (%)</span></div>
+        {% if chart.labels %}
+        <canvas id="activityChart" height="130"></canvas>
+        {% else %}
+        <p class="muted">Hələ başladılmış kampaniya yoxdur.</p>
+        {% endif %}
+    </section>
+
+    <section class="panel">
+        <div class="panel-head"><h2>Son kampaniyalar</h2></div>
+        {% if recent %}
+        <table class="table-clean">
+            <thead><tr><th>Ad</th><th>Status</th><th>Göndərildi</th><th>Klik</th></tr></thead>
+            <tbody>
+            {% for c in recent %}
+                <tr><td>{{ c.name }}</td><td>{{ status_badge(c.status) }}</td>
+                    <td>{{ c.sent }}</td><td>{{ c.clicks }}</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}<p class="muted">Kampaniya yoxdur.</p>{% endif %}
+    </section>
+</div>
+
+<section class="panel">
+    <div class="panel-head"><h2>Şöbə üzrə müqayisə</h2>
+        <span class="muted">Klik faizi = kliklədən iştirakçı / şöbədəki iştirakçı</span></div>
+    {% if departments %}
+    <table class="table-clean">
+        <thead><tr><th>Şöbə</th><th>İştirakçı</th><th>Kliklədi</th><th>Report etdi</th><th>Klik faizi</th></tr></thead>
+        <tbody>
+        {% for d in departments %}
+            <tr>
+                <td>{{ d.name }}</td>
+                <td>{{ d.participants }}{% if d.participants < 3 %} <span class="muted" title="Kiçik nümunə">*</span>{% endif %}</td>
+                <td>{{ d.clicked }}</td>
+                <td>{{ d.reported }}</td>
+                <td><strong>{{ d.click_rate }}%</strong></td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <small class="muted">* Nümunə həcmi kiçik olan şöbələrdə faizlər etibarlı deyil.</small>
+    {% else %}<p class="muted">Şöbə məlumatı yoxdur.</p>{% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% if chart.labels %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+  new Chart(document.getElementById('activityChart'), {
+    type: 'bar',
+    data: {
+      labels: {{ chart.labels | tojson }},
+      datasets: [
+        { label: 'Klik faizi %', data: {{ chart.clicks | tojson }}, backgroundColor: '#2563eb', borderRadius: 6 },
+        { label: 'Report faizi %', data: {{ chart.reports | tojson }}, backgroundColor: '#14b8a6', borderRadius: 6 }
+      ]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'bottom' } },
+      scales: { y: { beginAtZero: true, ticks: { callback: v => v + '%' } } } }
+  });
+</script>
+{% endif %}
+{% endblock %}

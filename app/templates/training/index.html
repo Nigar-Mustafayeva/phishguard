@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Təlim · PhishGuard{% endblock %}
+{% block page_title %}Təhlükəsizlik Təlimi{% endblock %}
+
+{% block content %}
+{% if modules %}
+<div class="training-grid">
+    {% for m in modules %}
+    <a class="training-card" href="{{ url_for('training.module', slug=m.slug) }}">
+        <div class="training-icon"><i class="bi bi-mortarboard"></i></div>
+        <h3>{{ m.title }}</h3>
+        <p class="muted">{{ m.questions|length }} sual · quiz</p>
+        <span class="training-go">Başla <i class="bi bi-arrow-right"></i></span>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <i class="bi bi-mortarboard empty-icon"></i>
+    <h2>Təlim modulu yoxdur</h2>
+    <p class="muted">Modul əlavə etmək üçün: <code>flask seed-training</code></p>
+</div>
+{% endif %}
+{% endblock %}

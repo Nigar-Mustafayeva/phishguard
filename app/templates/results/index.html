@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Nəticələr · PhishGuard{% endblock %}
+{% block page_title %}Nəticələr{% endblock %}
+
+{% block content %}
+<section class="panel">
+    <div class="panel-head"><h2>Kampaniyalar üzrə funnel</h2>
+        <span class="muted">Faizlər göndərilən email sayına görə hesablanır</span></div>
+    {% if rows %}
+    <table class="table-clean">
+        <thead><tr>
+            <th>Kampaniya</th><th>Göndərildi</th><th>Açıldı</th><th>Kliklədi</th>
+            <th>Form</th><th>Report</th><th>Klik %</th><th>Report %</th>
+        </tr></thead>
+        <tbody>
+        {% for c, m in rows %}
+            <tr>
+                <td><a href="{{ url_for('results.detail', cid=c.id) }}">{{ c.name }}</a></td>
+                <td>{{ m.sent }}</td>
+                <td>{{ m.opened }}</td>
+                <td>{{ m.clicked }}</td>
+                <td>{{ m.submitted }}</td>
+                <td>{{ m.reported }}</td>
+                <td><strong>{{ m.click_rate }}%</strong></td>
+                <td>{{ m.report_rate }}%</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="muted">Hələ nəticə yoxdur. Kampaniya başladıb sinxronlaşdırın.</p>
+    {% endif %}
+</section>
+
+<section class="panel">
+    <div class="panel-head"><h2>Düsturlar və məhdudiyyətlər</h2></div>
+    <ul class="info-list">
+        <li><strong>Klik faizi</strong> = kliklədi / göndərildi ·
+            <strong>Report faizi</strong> = report etdi / göndərildi</li>
+        <li><strong>Email açılma izləməsi məhduddur:</strong> açılma adətən
+            görünməz "tracking pixel" ilə ölçülür. Bir çox email proqramı
+            şəkilləri avtomatik bloklayır və ya önizləmədə yükləyir, ona görə
+            açılma rəqəmləri həmişə dəqiq deyil (həm az, həm çox göstərə bilər).</li>
+        <li><strong>Parol saxlanmır:</strong> credential-harvest simulyasiyası
+            işləməyən təlim formasıdır — yalnız "form göndərildi" faktı qeyd olunur,
+            daxil edilən heç bir məlumat saxlanmır.</li>
+        <li><strong>Bir klik = təhlükə deyil:</strong> nəticələr insanları
+            "təhlükəli" kimi təsnif etmək üçün yox, maarifləndirmə üçündür.</li>
+    </ul>
+</section>
+{% endblock %}
