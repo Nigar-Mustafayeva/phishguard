@@ -50,3 +50,52 @@ def test_cannot_sync_draft(auth_client, app):
     cid = campaign_id_by_name(app, "DraftSync")
     resp = auth_client.post(f"/campaigns/{cid}/sync", follow_redirects=True)
     assert "Qaralama".encode() in resp.data
+
+
+# Sample GoPhish /api/campaigns/{id} payload (trimmed to what we use).
+SAMPLE_GOPHISH_CAMPAIGN = {
+    "id": 7,
+    "name": "Q4 Awareness Test",
+    "status": "Completed",
+    "launch_date": "2026-10-01T09:00:00Z",
+    "results": [
+        {"email": "ali@corp.example", "first_name": "Ali", "last_name": "V"},
+        {"email": "sara@corp.example", "first_name": "Sara", "last_name": "K"},
+    ],
+    "timeline": [
+        {"email": "ali@corp.example", "message": "Email Sent", "time": "2026-10-01T09:00:00Z"},
+        {"email": "ali@corp.example", "message": "Email Opened", "time": "2026-10-01T09:05:00Z"},
+        {"email": "ali@corp.example", "message": "Clicked Link", "time": "2026-10-01T09:06:00Z"},
+        {"email": "sara@corp.example", "message": "Email Sent", "time": "2026-10-01T09:00:00Z"},
+        {"email": "sara@corp.example", "message": "Email Reported", "time": "2026-10-01T09:10:00Z"},
+    ],
+}
+
+
+def test_import_gophish_campaign(app, monkeypatch):
+    with app.app_context():
+        from flask import current_app
+        from app.services import gophish_service
+        from app.models import (Campaign, Participant, CampaignEvent,
+                                 EVENT_CLICKED, EVENT_REPORTED)
+        # Put the service in live mode and stub the network call.
+        current_app.config.update(DEMO_MODE=False,
+                                  GOPHISH_API_URL="https://gophish.example",
+                                  GOPHISH_API_KEY="k")
+        monkeypatch.setattr(gophish_service, "fetch_campaign",
+                            lambda gid: SAMPLE_GOPHISH_CAMPAIGN)
+
+        msg = gophish_service.import_campaign(7)
+        assert "import" in msg.lower()
+
+        camp = Campaign.query.filter_by(gophish_campaign_id=7).first()
+        assert camp is not None and camp.name == "Q4 Awareness Test"
+        assert Participant.query.filter_by(email="ali@corp.example").count() == 1
+        assert CampaignEvent.query.filter_by(campaign_id=camp.id,
+                                             event_type=EVENT_CLICKED).count() == 1
+        assert CampaignEvent.query.filter_by(campaign_id=camp.id,
+                                             event_type=EVENT_REPORTED).count() == 1
+
+        # Re-import must not duplicate participants.
+        gophish_service.import_campaign(7)
+        assert Participant.query.filter_by(email="ali@corp.example").count() == 1

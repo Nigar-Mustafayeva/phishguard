@@ -146,3 +146,28 @@ GoPhish-i ayrıca, **qorunan** mühitdə (admin paneli public deyil — VPN/fire
 arxasında) işlədin və yalnız o mühitdə `.env`-də `DEMO_MODE=false`,
 `GOPHISH_API_URL`, `GOPHISH_API_KEY` təyin et. Public portfolio deploy-u heç
 vaxt canlı phishing motoruna bağlama.
+
+## Canlı GoPhish-dən data çəkmək (lokal)
+
+Platforma GoPhish kampaniyasının **real nəticələrini** import edə bilər. GoPhish
+lokal işlədiyi üçün bunu **lokal mühitdə** nümayiş etdir (public Render demo-da
+qalır):
+
+1. GoPhish-i işə sal (lokal, adətən `https://localhost:3333`). Bir kampaniya
+   yarat və işə sal (və ya mövcud kampaniyadan istifadə et).
+2. GoPhish admin → **Settings** → **API key**-i kopyala.
+3. Lokal `.env` faylında təyin et:
+   ```
+   DEMO_MODE=false
+   GOPHISH_API_URL=https://localhost:3333
+   GOPHISH_API_KEY=<api-açarın>
+   GOPHISH_VERIFY_SSL=false
+   ```
+4. `python run.py` → login → sol menyuda **İnteqrasiya**. GoPhish əlçatandırsa,
+   kampaniyaların siyahısı görünəcək → **Import et**.
+5. Import iştirakçıları və hadisələri (sent/opened/clicked/submitted/reported)
+   çəkir. Sonra **Nəticələr**, **Risk Intelligence** və **Dashboard** avtomatik
+   real datanı göstərir. Təkrar import dublikat yaratmır.
+
+> Yalnız icazəli (authorized) testlər üçün. GoPhish admin panelini public
+> internetə açma.

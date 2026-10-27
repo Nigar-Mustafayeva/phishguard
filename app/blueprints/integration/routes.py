@@ -1,11 +1,17 @@
-"""Integration status page: shows GoPhish and Mailtrap connection state.
+"""Integration status + GoPhish campaign import.
 
-Read-only. Never displays API keys or passwords.
+Read-only status, plus (in live mode) the ability to pull a real GoPhish
+campaign's recipients and events into the local database. Never displays the
+API key or password.
 """
-from flask import Blueprint, render_template
-from flask_login import login_required
+from flask import (Blueprint, render_template, redirect, url_for, flash,
+                   request)
+from flask_login import login_required, current_user
 
+from app.extensions import db
+from app.models import AuditLog
 from app.services import gophish_service
+from app.services.gophish_service import GoPhishError
 from app.services.mail_service import is_mailtrap_configured
 
 integration_bp = Blueprint("integration", __name__, url_prefix="/integration")
@@ -14,7 +20,34 @@ integration_bp = Blueprint("integration", __name__, url_prefix="/integration")
 @integration_bp.route("/")
 @login_required
 def index():
+    status = gophish_service.check_status()
+    gophish_campaigns = None
+    fetch_error = None
+    # In live + reachable mode, list available GoPhish campaigns to import.
+    if status["mode"] == "live" and status["reachable"]:
+        try:
+            gophish_campaigns = gophish_service.fetch_campaigns()
+        except GoPhishError as exc:
+            fetch_error = str(exc)
     return render_template("integration/index.html",
-                          gophish=gophish_service.check_status(),
+                          gophish=status,
                           gophish_configured=gophish_service.is_configured(),
-                          mailtrap_ok=is_mailtrap_configured())
+                          mailtrap_ok=is_mailtrap_configured(),
+                          gophish_campaigns=gophish_campaigns,
+                          fetch_error=fetch_error)
+
+
+@integration_bp.route("/import/<int:gophish_id>", methods=["POST"])
+@login_required
+def import_campaign(gophish_id):
+    try:
+        message = gophish_service.import_campaign(gophish_id)
+        db.session.add(AuditLog(user_id=current_user.id,
+                                action="gophish_import",
+                                detail=f"GoPhish campaign {gophish_id}",
+                                ip_address=request.remote_addr))
+        db.session.commit()
+        flash(message, "success")
+    except GoPhishError as exc:
+        flash(f"Import alınmadı: {exc}", "danger")
+    return redirect(url_for("integration.index"))

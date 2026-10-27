@@ -38,6 +38,40 @@
     </section>
 </div>
 
+{% if gophish.mode == "live" and gophish.reachable %}
+<section class="panel">
+    <div class="panel-head"><h2>GoPhish kampaniyalarını import et</h2>
+        <span class="muted">Real nəticələri daxili bazaya çək</span></div>
+    {% if fetch_error %}
+        <div class="alert alert-danger">GoPhish siyahısı alınmadı: {{ fetch_error }}</div>
+    {% elif gophish_campaigns %}
+    <table class="table-clean">
+        <thead><tr><th>ID</th><th>Ad</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+        {% for c in gophish_campaigns %}
+            <tr>
+                <td class="muted">{{ c.id }}</td>
+                <td>{{ c.name }}</td>
+                <td class="muted">{{ c.status }}</td>
+                <td class="row-actions">
+                    <form method="post" action="{{ url_for('integration.import_campaign', gophish_id=c.id) }}" style="display:inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="btn btn-outline btn-sm"><i class="bi bi-download"></i> Import et</button>
+                    </form>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <p class="muted" style="font-size:.8rem">Import iştirakçıları və hadisələri
+        (sent/opened/clicked/submitted/reported) GoPhish-dən çəkir. Təkrar import
+        dublikat yaratmır — mövcud datanı yeniləyir.</p>
+    {% else %}
+    <p class="muted">GoPhish-də hələ kampaniya yoxdur.</p>
+    {% endif %}
+</section>
+{% endif %}
+
 <section class="panel">
     <div class="panel-head"><h2>Rejimlər necə işləyir</h2></div>
     <ul class="info-list">

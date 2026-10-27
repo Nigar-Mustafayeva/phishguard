@@ -18,9 +18,10 @@ import requests
 from flask import current_app
 
 from app.extensions import db
-from app.models import (CampaignEvent, CampaignParticipant, Participant,
+from app.models import (Campaign, CampaignEvent, CampaignParticipant, Participant,
                         EVENT_SENT, EVENT_OPENED, EVENT_CLICKED,
-                        EVENT_SUBMITTED, EVENT_REPORTED)
+                        EVENT_SUBMITTED, EVENT_REPORTED,
+                        STATUS_ACTIVE, STATUS_COMPLETED)
 
 # Map GoPhish timeline messages -> our event types.
 GOPHISH_EVENT_MAP = {
@@ -79,13 +80,99 @@ def check_status() -> dict:
 
 
 def fetch_campaigns() -> list:
-    """List GoPhish campaigns (live mode only)."""
+    """List GoPhish campaigns (live mode only): [{id, name, status}, ...]."""
     if demo_mode_active():
         raise GoPhishError("Demo rejimdə GoPhish siyahısı mövcud deyil.")
     resp = _request("/api/campaigns/")
     if resp.status_code != 200:
         raise GoPhishError(f"HTTP {resp.status_code}")
     return resp.json()
+
+
+def fetch_campaign(gophish_id: int) -> dict:
+    """Fetch one GoPhish campaign (incl. results + timeline)."""
+    if demo_mode_active():
+        raise GoPhishError("Demo rejimdə GoPhish datası mövcud deyil.")
+    resp = _request(f"/api/campaigns/{gophish_id}")
+    if resp.status_code != 200:
+        raise GoPhishError(f"GoPhish HTTP {resp.status_code}")
+    return resp.json()
+
+
+def import_campaign(gophish_id: int) -> str:
+    """Import a GoPhish campaign into the local database.
+
+    Creates/updates a local campaign linked by gophish_campaign_id, creates
+    participants from the campaign's recipients, and maps timeline events.
+    Idempotent: re-importing refreshes events without duplicating participants.
+    """
+    data = fetch_campaign(gophish_id)
+    name = data.get("name") or f"GoPhish #{gophish_id}"
+
+    camp = Campaign.query.filter_by(gophish_campaign_id=gophish_id).first()
+    if camp is None:
+        camp = Campaign(name=name, gophish_campaign_id=gophish_id, is_demo=False)
+        db.session.add(camp)
+    else:
+        camp.name = name
+    camp.status = (STATUS_COMPLETED if str(data.get("status", "")).lower() == "completed"
+                   else STATUS_ACTIVE)
+    camp.launched_at = _parse_time(data.get("launch_date")) or camp.launched_at
+    db.session.flush()
+
+    # Participants from the campaign's recipients.
+    new_participants = 0
+    for r in data.get("results", []):
+        email = (r.get("email") or "").lower().strip()
+        if not email:
+            continue
+        p = Participant.query.filter_by(email=email).first()
+        if p is None:
+            p = Participant(first_name=r.get("first_name") or "?",
+                            last_name=r.get("last_name") or "?",
+                            email=email, is_demo=False)
+            db.session.add(p)
+            db.session.flush()
+            new_participants += 1
+        if not CampaignParticipant.query.filter_by(
+                campaign_id=camp.id, participant_id=p.id).first():
+            db.session.add(CampaignParticipant(campaign_id=camp.id, participant_id=p.id))
+    db.session.flush()
+
+    email_to_pid = {}
+    for cp in CampaignParticipant.query.filter_by(campaign_id=camp.id):
+        p = db.session.get(Participant, cp.participant_id)
+        if p:
+            email_to_pid[p.email.lower()] = p.id
+
+    # Replace any previous GoPhish events for this campaign (idempotent).
+    CampaignEvent.query.filter_by(campaign_id=camp.id, source="gophish").delete(
+        synchronize_session=False)
+
+    events = 0
+    seen_sent = set()
+    for entry in data.get("timeline", []):
+        etype = GOPHISH_EVENT_MAP.get(entry.get("message"))
+        if not etype:
+            continue
+        pid = email_to_pid.get((entry.get("email") or "").lower())
+        db.session.add(CampaignEvent(campaign_id=camp.id, participant_id=pid,
+                                     event_type=etype, source="gophish",
+                                     occurred_at=_parse_time(entry.get("time"))))
+        if etype == EVENT_SENT and pid:
+            seen_sent.add(pid)
+        events += 1
+
+    # Ensure every recipient has a "sent" event so metrics compute correctly.
+    for pid in email_to_pid.values():
+        if pid not in seen_sent:
+            db.session.add(CampaignEvent(campaign_id=camp.id, participant_id=pid,
+                                         event_type=EVENT_SENT, source="gophish",
+                                         occurred_at=camp.launched_at or datetime.utcnow()))
+
+    db.session.commit()
+    return (f"GoPhish-dən import edildi: '{name}' — "
+            f"{len(email_to_pid)} iştirakçı ({new_participants} yeni), {events} hadisə.")
 
 
 def _clear_source_events(campaign, source, keep_sent=True):
