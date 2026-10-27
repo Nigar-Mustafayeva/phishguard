@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Risk Intelligence · PhishGuard{% endblock %}
+{% block page_title %}Risk Intelligence{% endblock %}
+
+{% macro risk_badge(level, label) %}
+    <span class="risk-pill risk-{{ level }}">{{ label }}</span>
+{% endmacro %}
+
+{% block content %}
+<!-- Org summary -->
+<div class="stat-grid">
+    <div class="stat-card"><div class="stat-icon bg-navy"><i class="bi bi-people"></i></div>
+        <div><div class="stat-value">{{ summary.count }}</div><div class="stat-label">Profilli iştirakçı</div></div></div>
+    <div class="stat-card"><div class="stat-icon bg-amber"><i class="bi bi-speedometer2"></i></div>
+        <div><div class="stat-value">{{ summary.avg }}</div><div class="stat-label">Orta risk balı</div></div></div>
+    <div class="stat-card"><div class="stat-icon bg-red"><i class="bi bi-exclamation-octagon"></i></div>
+        <div><div class="stat-value">{{ summary.high }}</div><div class="stat-label">Yüksək risk</div></div></div>
+    <div class="stat-card"><div class="stat-icon bg-green"><i class="bi bi-shield-check"></i></div>
+        <div><div class="stat-value">{{ summary.low }}</div><div class="stat-label">Aşağı risk</div></div></div>
+</div>
+
+<!-- Training effectiveness trend -->
+{% if effectiveness %}
+<section class="panel">
+    <div class="panel-head"><h2>Təlim effektivliyi (trend)</h2>
+        <span class="muted">İlk vs son kampaniya</span></div>
+    <div class="effect-row">
+        <div class="effect-box">
+            <span class="muted">{{ effectiveness.first.name }}</span>
+            <div class="effect-val">{{ effectiveness.first.click_rate }}%</div>
+            <span class="muted">klik faizi</span>
+        </div>
+        <div class="effect-arrow">
+            <i class="bi bi-arrow-right"></i>
+            <div class="{{ 'delta-good' if effectiveness.click_delta < 0 else 'delta-bad' }}">
+                {{ effectiveness.click_delta }}%
+            </div>
+        </div>
+        <div class="effect-box">
+            <span class="muted">{{ effectiveness.last.name }}</span>
+            <div class="effect-val">{{ effectiveness.last.click_rate }}%</div>
+            <span class="muted">klik faizi</span>
+        </div>
+    </div>
+    <p class="muted" style="font-size:.8rem">Qeyd: bu, nəzarətli əvvəl/sonra təcrübəsi deyil —
+        kampaniyalar arasında trend göstəricisidir.</p>
+</section>
+{% endif %}
+
+<!-- Risk table -->
+<section class="panel">
+    <div class="panel-head"><h2>İştirakçı risk profilləri</h2>
+        <span class="muted">Yüksək risk yuxarıda · bal 0–100</span></div>
+    {% if profiles %}
+    <table class="table-clean">
+        <thead><tr><th>İştirakçı</th><th>Şöbə</th><th>Risk balı</th><th>Səviyyə</th>
+            <th>Əsas səbəb</th><th>Tövsiyə</th></tr></thead>
+        <tbody>
+        {% for r in profiles %}
+            <tr>
+                <td><a href="{{ url_for('risk.detail', pid=r.participant.id) }}">{{ r.participant.full_name }}</a></td>
+                <td class="muted">{{ r.participant.department.name if r.participant.department else "—" }}</td>
+                <td>
+                    <div class="risk-bar"><span style="width:{{ r.score }}%" class="risk-fill-{{ r.level }}"></span></div>
+                    <strong>{{ r.score }}</strong>
+                </td>
+                <td>{{ risk_badge(r.level, r.level_label) }}</td>
+                <td class="muted">{{ r.factors[1] if r.factors|length > 1 else r.factors[0] }}</td>
+                <td class="muted">{{ r.rec_title }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="muted">Hələ risk datası yoxdur. Kampaniya başladıb sinxronlaşdırın.</p>
+    {% endif %}
+</section>
+
+<section class="panel">
+    <div class="panel-head"><h2>Risk balı necə hesablanır?</h2></div>
+    <ul class="info-list">
+        <li>Klik nisbəti əsas amildir (hər kliklədiyi kampaniya balı artırır).</li>
+        <li>Təlim formasına məlumat daxil etmək balı daha çox artırır.</li>
+        <li>Təkrar klik (bir neçə kampaniyada) əlavə bal verir.</li>
+        <li>Şübhəli emaili report etmək balı <strong>azaldır</strong> (müsbət davranış).</li>
+        <li>Nəticələr insanı "təhlükəli" damğalamaq üçün yox — hədəfli təlim üçündür.</li>
+    </ul>
+</section>
+{% endblock %}

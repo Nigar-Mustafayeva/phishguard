@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}{{ risk.participant.full_name }} · Risk · PhishGuard{% endblock %}
+{% block page_title %}Risk profili: {{ risk.participant.full_name }}{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <a href="{{ url_for('risk.index') }}" class="btn btn-outline">← Risk siyahısı</a>
+</div>
+
+<div class="row-split">
+    <!-- Score card -->
+    <section class="panel">
+        <div class="panel-head"><h2>Risk balı</h2></div>
+        <div class="score-circle score-{{ risk.level }}">
+            <span>{{ risk.score }}</span>
+            <small>{{ risk.level_label }}</small>
+        </div>
+        <table class="kv">
+            <tr><td>Email</td><td>{{ risk.participant.email }}</td></tr>
+            <tr><td>Şöbə</td><td>{{ risk.participant.department.name if risk.participant.department else "—" }}</td></tr>
+            <tr><td>Hədəf kampaniya</td><td>{{ risk.stats.sent }}</td></tr>
+            <tr><td>Klik</td><td>{{ risk.stats.clicked }}</td></tr>
+            <tr><td>Form doldurma</td><td>{{ risk.stats.submitted }}</td></tr>
+            <tr><td>Report</td><td>{{ risk.stats.reported }}</td></tr>
+        </table>
+    </section>
+
+    <!-- Explanation + adaptive training -->
+    <section class="panel">
+        <div class="panel-head"><h2>Niyə bu bal? (izah)</h2></div>
+        <ul class="info-list">
+            {% for f in risk.factors %}<li>{{ f }}</li>{% endfor %}
+        </ul>
+
+        {% if risk.rec_slug %}
+        <div class="rec-box">
+            <div class="rec-head"><i class="bi bi-mortarboard"></i> Tövsiyə olunan təlim</div>
+            <p>Bu iştirakçının davranışına əsasən:</p>
+            <a href="{{ url_for('training.module', slug=risk.rec_slug) }}" class="btn btn-primary">
+                {{ risk.rec_title }}
+            </a>
+        </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

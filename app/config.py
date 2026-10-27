@@ -17,9 +17,13 @@ def _database_url() -> str:
     if not url:
         # Default local database
         return f"sqlite:///{basedir / 'platform.db'}"
-    # Render/Heroku give "postgres://" but SQLAlchemy needs "postgresql://"
+    # Render/Heroku give "postgres://" but SQLAlchemy needs "postgresql://".
     if url.startswith("postgres://"):
         url = url.replace("postgres://", "postgresql://", 1)
+    # Use the psycopg (v3) driver explicitly so the dialect matches the
+    # installed package (psycopg[binary]).
+    if url.startswith("postgresql://"):
+        url = url.replace("postgresql://", "postgresql+psycopg://", 1)
     return url
 
 

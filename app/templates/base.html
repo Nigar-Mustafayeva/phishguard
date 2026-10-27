@@ -42,6 +42,10 @@
                class="nav-link {% if request.blueprint == 'results' %}active{% endif %}">
                 <i class="bi bi-graph-up"></i> Nəticələr
             </a>
+            <a href="{{ url_for('risk.index') }}"
+               class="nav-link {% if request.blueprint == 'risk' %}active{% endif %}">
+                <i class="bi bi-shield-exclamation"></i> Risk Intelligence
+            </a>
             <a href="{{ url_for('training.index') }}"
                class="nav-link {% if request.blueprint == 'training' %}active{% endif %}">
                 <i class="bi bi-mortarboard"></i> Təlim

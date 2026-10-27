@@ -65,6 +65,15 @@ Brauzerdə aç: http://127.0.0.1:5000
 | 12 | Audit log + settings (istifadəçi idarəsi) | ✅ Hazır |
 | 13 | Avtomatik testlər (52 test) | ✅ Hazır |
 | 14 | Render deployment (PostgreSQL, demo mode) | ✅ Hazır |
+| + | Risk Intelligence modulu | ✅ Hazır |
+
+### Risk Intelligence (fərqləndirici funksiya)
+GoPhish-dən fərqli olaraq, PhishGuard nəticələri bütün kampaniyalar üzrə
+birləşdirib hər iştirakçı üçün **risk profili** qurur:
+- **Human Risk Intelligence** — 0–100 risk balı (klik, form, təkrar səhv, report).
+- **Explainable Risk** — balın səbəbləri açıq göstərilir (qara qutu deyil).
+- **Adaptive Training** — iştirakçının aldandığı mövzuya uyğun təlim tövsiyəsi.
+- **Training Effectiveness** — kampaniyalar arası klik faizi trendi (əvvəl/sonra).
 
 ## Testlər
 

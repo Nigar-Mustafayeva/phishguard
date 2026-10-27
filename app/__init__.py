@@ -65,6 +65,7 @@ def _register_blueprints(app: Flask) -> None:
     from .blueprints.reports.routes import reports_bp
     from .blueprints.integration.routes import integration_bp
     from .blueprints.settings.routes import settings_bp
+    from .blueprints.risk.routes import risk_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -76,6 +77,7 @@ def _register_blueprints(app: Flask) -> None:
     app.register_blueprint(reports_bp)
     app.register_blueprint(integration_bp)
     app.register_blueprint(settings_bp)
+    app.register_blueprint(risk_bp)
 
 
 def _register_misc(app: Flask) -> None:
