@@ -1,43 +1,41 @@
 {% extends "base.html" %}
 {% block title %}{{ risk.participant.full_name }} · Risk · PhishGuard{% endblock %}
-{% block page_title %}Risk profili: {{ risk.participant.full_name }}{% endblock %}
+{% block page_title %}{{ risk.participant.full_name }}{% endblock %}
+{% block page_sub %}Risk profile{% endblock %}
 
 {% block content %}
-<div class="toolbar">
-    <a href="{{ url_for('risk.index') }}" class="btn btn-outline">← Risk siyahısı</a>
-</div>
+<a href="{{ url_for('risk.index') }}" class="back-link"><i class="bi bi-arrow-left"></i> Risk intelligence</a>
 
-<div class="row-split">
+<div class="row-split" style="grid-template-columns:1fr 1.3fr">
     <!-- Score card -->
     <section class="panel">
-        <div class="panel-head"><h2>Risk balı</h2></div>
-        <div class="score-circle score-{{ risk.level }}">
-            <span>{{ risk.score }}</span>
-            <small>{{ risk.level_label }}</small>
+        <div class="panel-head"><h2><i class="bi bi-speedometer2"></i> Risk score</h2></div>
+        <div class="score-circle score-{{ risk.level }}" style="--p:{{ risk.score }}">
+            <div><span>{{ risk.score }}</span><small>{{ risk.level_label }}</small></div>
         </div>
         <table class="kv">
             <tr><td>Email</td><td>{{ risk.participant.email }}</td></tr>
-            <tr><td>Şöbə</td><td>{{ risk.participant.department.name if risk.participant.department else "—" }}</td></tr>
-            <tr><td>Hədəf kampaniya</td><td>{{ risk.stats.sent }}</td></tr>
-            <tr><td>Klik</td><td>{{ risk.stats.clicked }}</td></tr>
-            <tr><td>Form doldurma</td><td>{{ risk.stats.submitted }}</td></tr>
-            <tr><td>Report</td><td>{{ risk.stats.reported }}</td></tr>
+            <tr><td>Department</td><td>{{ risk.participant.department.name if risk.participant.department else "—" }}</td></tr>
+            <tr><td>Targeted campaigns</td><td>{{ risk.stats.sent }}</td></tr>
+            <tr><td>Clicks</td><td>{{ risk.stats.clicked }}</td></tr>
+            <tr><td>Form submissions</td><td>{{ risk.stats.submitted }}</td></tr>
+            <tr><td>Reports</td><td>{{ risk.stats.reported }}</td></tr>
         </table>
     </section>
 
     <!-- Explanation + adaptive training -->
     <section class="panel">
-        <div class="panel-head"><h2>Niyə bu bal? (izah)</h2></div>
+        <div class="panel-head"><h2><i class="bi bi-lightbulb"></i> Why this score? (explanation)</h2></div>
         <ul class="info-list">
             {% for f in risk.factors %}<li>{{ f }}</li>{% endfor %}
         </ul>
 
         {% if risk.rec_slug %}
         <div class="rec-box">
-            <div class="rec-head"><i class="bi bi-mortarboard"></i> Tövsiyə olunan təlim</div>
-            <p>Bu iştirakçının davranışına əsasən:</p>
+            <div class="rec-head"><i class="bi bi-mortarboard"></i> Recommended training</div>
+            <p>Based on this participant's behaviour:</p>
             <a href="{{ url_for('training.module', slug=risk.rec_slug) }}" class="btn btn-primary">
-                {{ risk.rec_title }}
+                {{ risk.rec_title }} <i class="bi bi-arrow-right"></i>
             </a>
         </div>
         {% endif %}

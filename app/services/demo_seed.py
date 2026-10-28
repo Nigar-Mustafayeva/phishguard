@@ -14,27 +14,52 @@ from app.models import (Department, Participant, EmailTemplate, Campaign,
                         EVENT_SUBMITTED, EVENT_REPORTED)
 from app.services.training_content import seed_training
 
-DEPARTMENTS = ["IT", "Maliyyə", "HR", "Satış"]
+DEPARTMENTS = ["IT", "Finance", "HR", "Sales"]
 
 PARTICIPANTS = [
     ("Aysel", "Məmmədova", "IT"), ("Rauf", "Əliyev", "IT"),
-    ("Nigar", "Hüseynova", "Maliyyə"), ("Elvin", "Quliyev", "Maliyyə"),
+    ("Nigar", "Hüseynova", "Finance"), ("Elvin", "Quliyev", "Finance"),
     ("Günel", "Rəhimova", "HR"), ("Tural", "İsmayılov", "HR"),
-    ("Leyla", "Kərimova", "Satış"), ("Orxan", "Babayev", "Satış"),
+    ("Leyla", "Kərimova", "Sales"), ("Orxan", "Babayev", "Sales"),
 ]
 
 TEMPLATES = [
-    dict(name="IT Password Reset", subject="Şifrənizin yenilənməsi tələb olunur",
-         sender_name="IT Dəstək", sender_email="it-support@example.com",
+    dict(name="IT Password Reset", subject="Action required: your password expires today",
+         sender_name="IT Support", sender_email="it-support@example.com",
          category="credential",
-         html_body="<p>Hörmətli {{first_name}}, şifrəniz 24 saat ərzində "
-                   "sıfırlanacaq. Yeniləmək üçün <a href='#'>buraya klikləyin</a>.</p>"),
-    dict(name="Software Update Notice", subject="Təcili proqram yeniləməsi",
-         sender_name="Sistem Administratoru", sender_email="updates@example.com",
+         html_body="<p>Dear {{first_name}}, your password will be reset within "
+                   "24 hours. <a href='#'>Click here to keep your current password</a>.</p>"),
+    dict(name="Software Update Notice", subject="Urgent: security update required",
+         sender_name="System Administrator", sender_email="updates@example.com",
          category="update",
-         html_body="<p>Salam {{first_name}}, yeni təhlükəsizlik yeniləməsi "
-                   "mövcuddur. <a href='#'>İndi quraşdırın</a>.</p>"),
+         html_body="<p>Hi {{first_name}}, a critical security update is "
+                   "available for your device. <a href='#'>Install it now</a>.</p>"),
 ]
+
+
+# Old (Azerbaijani) demo values -> English, for databases seeded earlier.
+_LEGACY_DEPARTMENTS = {"Maliyyə": "Finance", "Satış": "Sales"}
+_LEGACY_DESCRIPTIONS = {"Demo kampaniya (nümunə data).": "Demo campaign (sample data)."}
+
+
+def refresh_demo_text() -> None:
+    """Update demo rows created by older seeds to the current English text.
+
+    Only touches demo templates (matched by name), the two renamed demo
+    departments and the demo campaign description. Idempotent.
+    """
+    for t in TEMPLATES:
+        row = EmailTemplate.query.filter_by(name=t["name"], is_demo=True).first()
+        if row:
+            for key in ("subject", "sender_name", "html_body"):
+                setattr(row, key, t[key])
+    for old, new in _LEGACY_DEPARTMENTS.items():
+        dept = Department.query.filter_by(name=old).first()
+        if dept and not Department.query.filter_by(name=new).first():
+            dept.name = new
+    for old, new in _LEGACY_DESCRIPTIONS.items():
+        Campaign.query.filter_by(description=old, is_demo=True).update({"description": new})
+    db.session.commit()
 
 
 def _clear_demo():
@@ -53,6 +78,7 @@ def seed_demo(reset: bool = False) -> bool:
         _clear_demo()
     elif Campaign.query.count() > 0:
         # Data already present — do not duplicate or wipe.
+        refresh_demo_text()
         seed_training()
         return False
 
@@ -74,7 +100,7 @@ def seed_demo(reset: bool = False) -> bool:
     db.session.flush()
 
     camp = Campaign(name="IT Password Reset",
-                    description="Demo kampaniya (nümunə data).",
+                    description="Demo campaign (sample data).",
                     status=STATUS_COMPLETED, template=templates[0], is_demo=True,
                     launched_at=datetime.utcnow() - timedelta(days=20))
     db.session.add(camp)

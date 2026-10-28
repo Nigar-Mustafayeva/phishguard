@@ -1,51 +1,52 @@
 {% extends "base.html" %}
-{% block title %}Nəticələr · PhishGuard{% endblock %}
-{% block page_title %}Nəticələr{% endblock %}
+{% block title %}Results · PhishGuard{% endblock %}
+{% block page_title %}Results{% endblock %}
+{% block page_sub %}How each campaign moved through the phishing funnel.{% endblock %}
 
 {% block content %}
 <section class="panel">
-    <div class="panel-head"><h2>Kampaniyalar üzrə funnel</h2>
-        <span class="muted">Faizlər göndərilən email sayına görə hesablanır</span></div>
+    <div class="panel-head"><div><h2><i class="bi bi-funnel"></i> Funnel by campaign</h2>
+        <span class="muted">Rates are calculated from the number of emails sent</span></div></div>
     {% if rows %}
+    <div class="table-wrap">
     <table class="table-clean">
         <thead><tr>
-            <th>Kampaniya</th><th>Göndərildi</th><th>Açıldı</th><th>Kliklədi</th>
-            <th>Form</th><th>Report</th><th>Klik %</th><th>Report %</th>
+            <th>Campaign</th><th class="num">Sent</th><th class="num">Opened</th><th class="num">Clicked</th>
+            <th class="num">Submitted</th><th class="num">Reported</th><th>Click rate</th><th>Report rate</th>
         </tr></thead>
         <tbody>
         {% for c, m in rows %}
             <tr>
-                <td><a href="{{ url_for('results.detail', cid=c.id) }}">{{ c.name }}</a></td>
-                <td>{{ m.sent }}</td>
-                <td>{{ m.opened }}</td>
-                <td>{{ m.clicked }}</td>
-                <td>{{ m.submitted }}</td>
-                <td>{{ m.reported }}</td>
-                <td><strong>{{ m.click_rate }}%</strong></td>
-                <td>{{ m.report_rate }}%</td>
+                <td><a class="cell-link" href="{{ url_for('results.detail', cid=c.id) }}" title="{{ c.name }}">{{ c.name }}</a></td>
+                <td class="num">{{ m.sent }}</td>
+                <td class="num">{{ m.opened }}</td>
+                <td class="num">{{ m.clicked }}</td>
+                <td class="num">{{ m.submitted }}</td>
+                <td class="num">{{ m.reported }}</td>
+                <td><span class="{{ 'text-red' if m.click_rate >= 30 else ('text-amber' if m.click_rate >= 15 else 'text-green') }}"><strong>{{ m.click_rate }}%</strong></span></td>
+                <td class="num">{{ m.report_rate }}%</td>
             </tr>
         {% endfor %}
         </tbody>
     </table>
+    </div>
     {% else %}
-    <p class="muted">Hələ nəticə yoxdur. Kampaniya başladıb sinxronlaşdırın.</p>
+    <p class="muted">No results yet. Launch a campaign and sync it.</p>
     {% endif %}
 </section>
 
 <section class="panel">
-    <div class="panel-head"><h2>Düsturlar və məhdudiyyətlər</h2></div>
+    <div class="panel-head"><h2><i class="bi bi-calculator"></i> Formulas and limitations</h2></div>
     <ul class="info-list">
-        <li><strong>Klik faizi</strong> = kliklədi / göndərildi ·
-            <strong>Report faizi</strong> = report etdi / göndərildi</li>
-        <li><strong>Email açılma izləməsi məhduddur:</strong> açılma adətən
-            görünməz "tracking pixel" ilə ölçülür. Bir çox email proqramı
-            şəkilləri avtomatik bloklayır və ya önizləmədə yükləyir, ona görə
-            açılma rəqəmləri həmişə dəqiq deyil (həm az, həm çox göstərə bilər).</li>
-        <li><strong>Parol saxlanmır:</strong> credential-harvest simulyasiyası
-            işləməyən təlim formasıdır — yalnız "form göndərildi" faktı qeyd olunur,
-            daxil edilən heç bir məlumat saxlanmır.</li>
-        <li><strong>Bir klik = təhlükə deyil:</strong> nəticələr insanları
-            "təhlükəli" kimi təsnif etmək üçün yox, maarifləndirmə üçündür.</li>
+        <li><strong>Click rate</strong> = clicked / sent ·
+            <strong>Report rate</strong> = reported / sent</li>
+        <li><strong>Open tracking is limited:</strong> opens are usually measured with an invisible
+            "tracking pixel". Many email clients block images or preload them, so open numbers
+            are never exact (they can be too low or too high).</li>
+        <li><strong>No passwords are stored:</strong> the credential-harvest simulation is a
+            non-functional training form — only the fact that it was submitted is recorded.</li>
+        <li><strong>One click is not a verdict:</strong> results are for education, not for labelling
+            people as "dangerous".</li>
     </ul>
 </section>
 {% endblock %}

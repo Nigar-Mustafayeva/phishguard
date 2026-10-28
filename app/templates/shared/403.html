@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}İcazə yoxdur · PhishGuard{% endblock %}
+{% block title %}Access denied · PhishGuard{% endblock %}
 {% block page_title %}403{% endblock %}
 
 {% block content %}
 <div class="empty-state">
-    <i class="bi bi-shield-exclamation empty-icon"></i>
-    <h2>İcazə yoxdur</h2>
-    <p class="muted">Bu səhifəyə yalnız administrator girə bilər.</p>
-    <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary">Dashboard-a qayıt</a>
+    <span class="empty-icon"><i class="bi bi-shield-exclamation"></i></span>
+    <h2>Access denied</h2>
+    <p class="muted">Only administrators can open this page.</p>
+    <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary">Back to dashboard</a>
 </div>
 {% endblock %}

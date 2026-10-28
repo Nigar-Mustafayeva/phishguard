@@ -49,7 +49,7 @@ def test_cannot_sync_draft(auth_client, app):
     create_campaign(auth_client, "DraftSync", tid, [pid])
     cid = campaign_id_by_name(app, "DraftSync")
     resp = auth_client.post(f"/campaigns/{cid}/sync", follow_redirects=True)
-    assert "Qaralama".encode() in resp.data
+    assert b"draft campaign cannot be synced" in resp.data
 
 
 # Sample GoPhish /api/campaigns/{id} payload (trimmed to what we use).

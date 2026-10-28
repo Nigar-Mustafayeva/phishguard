@@ -1,7 +1,7 @@
 """PDF report generation with reportlab.
 
-Uses a bundled DejaVuSans font so Azerbaijani characters (ə, ğ, ı …) render
-correctly. Reports are built entirely from stored data.
+Uses a bundled DejaVuSans font so non-Latin characters (e.g. ə, ğ, ı) in
+participant names render correctly. Reports are built entirely from stored data.
 """
 import io
 import os
@@ -37,28 +37,28 @@ def build_observations(metrics: dict) -> list[str]:
     cr = metrics["click_rate"]
     rr = metrics["report_rate"]
     if metrics["sent"] == 0:
-        return ["Bu kampaniyada hələ göndərilmiş email yoxdur."]
+        return ["No emails have been sent in this campaign yet."]
     if cr >= 30:
-        obs.append(f"Klik faizi yüksəkdir ({cr}%). Təcili maarifləndirmə tövsiyə olunur.")
+        obs.append(f"Click rate is high ({cr}%). Urgent awareness training is recommended.")
     elif cr >= 15:
-        obs.append(f"Klik faizi orta səviyyədədir ({cr}%). Təlim davam etdirilməlidir.")
+        obs.append(f"Click rate is moderate ({cr}%). Training should continue.")
     else:
-        obs.append(f"Klik faizi aşağıdır ({cr}%). Yaxşı nəticə.")
+        obs.append(f"Click rate is low ({cr}%). Good result.")
     if rr < 15:
-        obs.append(f"Report faizi aşağıdır ({rr}%). İstifadəçilərə şübhəli emaili "
-                   "'Report' etməyi öyrədin.")
+        obs.append(f"Report rate is low ({rr}%). Teach users to report suspicious "
+                   "emails with the 'Report' button.")
     else:
-        obs.append(f"Report faizi yaxşıdır ({rr}%).")
+        obs.append(f"Report rate is healthy ({rr}%).")
     if metrics["submitted"] > 0:
-        obs.append(f"{metrics['submitted']} nəfər təlim formasına məlumat daxil etdi "
-                   "(real parol saxlanmadı). Parol təhlükəsizliyi təlimi tövsiyə olunur.")
+        obs.append(f"{metrics['submitted']} people entered data into the training form "
+                   "(no real password was stored). Password-security training is recommended.")
     return obs
 
 
 SUGGESTED_TRAINING = [
-    "Phishing əlamətlərini tanımaq",
-    "Göndərən ünvanını yoxlamaq",
-    "Şübhəli linklər, parol və MFA",
+    "Recognising phishing red flags",
+    "Verifying the sender",
+    "Suspicious links, passwords & MFA",
 ]
 
 
@@ -79,49 +79,49 @@ def build_pdf(campaign, metrics: dict) -> bytes:
     small = ParagraphStyle("small", parent=body, fontSize=8,
                            textColor=colors.grey)
 
-    story = [Paragraph("PhishGuard — Kampaniya Hesabatı", h1)]
+    story = [Paragraph("PhishGuard — Campaign Report", h1)]
     story.append(Paragraph(
-        f"Yaradılma tarixi: {datetime.utcnow().strftime('%Y-%m-%d %H:%M')} UTC", small))
+        f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M')} UTC", small))
     if campaign.is_demo:
-        story.append(Paragraph("⚠ Bu hesabat NÜMUNƏ (demo) data əsasındadır.", small))
+        story.append(Paragraph("⚠ This report is based on SAMPLE (demo) data.", small))
     story.append(Spacer(1, 8))
 
     # Summary table
-    story.append(Paragraph("Xülasə", h2))
+    story.append(Paragraph("Summary", h2))
     summary = [
-        ["Kampaniya", campaign.name],
+        ["Campaign", campaign.name],
         ["Status", campaign.status],
-        ["Şablon", campaign.template.name if campaign.template else "—"],
-        ["Hədəf iştirakçı", str(metrics["targeted"])],
+        ["Template", campaign.template.name if campaign.template else "—"],
+        ["Targeted participants", str(metrics["targeted"])],
     ]
     story.append(_kv_table(summary))
 
     # Metrics table
-    story.append(Paragraph("Metrikalar", h2))
+    story.append(Paragraph("Metrics", h2))
     met = [
-        ["Metrika", "Say", "Faiz"],
-        ["Göndərildi", metrics["sent"], "100%"],
-        ["Açıldı", metrics["opened"], f"{metrics['open_rate']}%"],
-        ["Kliklədi", metrics["clicked"], f"{metrics['click_rate']}%"],
-        ["Form doldurdu", metrics["submitted"], f"{metrics['submit_rate']}%"],
-        ["Report etdi", metrics["reported"], f"{metrics['report_rate']}%"],
+        ["Metric", "Count", "Rate"],
+        ["Sent", metrics["sent"], "100%"],
+        ["Opened", metrics["opened"], f"{metrics['open_rate']}%"],
+        ["Clicked", metrics["clicked"], f"{metrics['click_rate']}%"],
+        ["Submitted form", metrics["submitted"], f"{metrics['submit_rate']}%"],
+        ["Reported", metrics["reported"], f"{metrics['report_rate']}%"],
     ]
     story.append(_metrics_table(met))
 
     # Observations
-    story.append(Paragraph("Əsas müşahidələr", h2))
+    story.append(Paragraph("Key observations", h2))
     for o in build_observations(metrics):
         story.append(Paragraph(f"• {o}", body))
 
     # Suggested training
-    story.append(Paragraph("Tövsiyə olunan təlim", h2))
+    story.append(Paragraph("Recommended training", h2))
     for t in SUGGESTED_TRAINING:
         story.append(Paragraph(f"• {t}", body))
 
     story.append(Spacer(1, 16))
     story.append(Paragraph(
-        "Qeyd: Real parollar heç vaxt saxlanmır. Nəticələr maarifləndirmə "
-        "məqsədi daşıyır, fərdi cəzalandırma üçün deyil.", small))
+        "Note: real passwords are never stored. Results are meant for awareness, "
+        "not for punishing individuals.", small))
 
     doc.build(story)
     return buf.getvalue()

@@ -1,15 +1,17 @@
 {% extends "base.html" %}
 {% block title %}{{ title }} · PhishGuard{% endblock %}
 {% block page_title %}{{ title }}{% endblock %}
+{% block page_sub %}Write the email exactly as participants will see it.{% endblock %}
 
 {% block content %}
+<a href="{{ url_for('templates_bp.index') }}" class="back-link"><i class="bi bi-arrow-left"></i> Email templates</a>
 <section class="panel">
     <form method="post" novalidate>
         {{ form.hidden_tag() }}
         <div class="form-row">
             <div class="form-group">
                 {{ form.name.label(class="form-label") }}
-                {{ form.name(class="form-control") }}
+                {{ form.name(class="form-control", placeholder="e.g. IT Password Reset") }}
                 {% for e in form.name.errors %}<small class="field-error">{{ e }}</small>{% endfor %}
             </div>
             <div class="form-group">
@@ -19,13 +21,13 @@
         </div>
         <div class="form-group">
             {{ form.subject.label(class="form-label") }}
-            {{ form.subject(class="form-control") }}
+            {{ form.subject(class="form-control", placeholder="e.g. Action required: your password expires today") }}
             {% for e in form.subject.errors %}<small class="field-error">{{ e }}</small>{% endfor %}
         </div>
         <div class="form-row">
             <div class="form-group">
                 {{ form.sender_name.label(class="form-label") }}
-                {{ form.sender_name(class="form-control", placeholder="IT Dəstək") }}
+                {{ form.sender_name(class="form-control", placeholder="IT Support") }}
             </div>
             <div class="form-group">
                 {{ form.sender_email.label(class="form-label") }}
@@ -37,12 +39,12 @@
             {{ form.html_body.label(class="form-label") }}
             {{ form.html_body(class="form-control code-area", rows="12") }}
             {% for e in form.html_body.errors %}<small class="field-error">{{ e }}</small>{% endfor %}
-            <small class="muted">İcazəli dəyişənlər:
+            <small class="form-hint">Allowed variables:
                 {% for v in allowed_vars %}<code>{{ '{{' }}{{ v }}{{ '}}' }}</code>{% if not loop.last %}, {% endif %}{% endfor %}
             </small>
         </div>
         <div class="form-actions">
-            <a href="{{ url_for('templates_bp.index') }}" class="btn btn-outline">Ləğv et</a>
+            <a href="{{ url_for('templates_bp.index') }}" class="btn btn-outline">Cancel</a>
             {{ form.submit(class="btn btn-primary") }}
         </div>
     </form>

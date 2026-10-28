@@ -1,28 +1,26 @@
 {% extends "base.html" %}
-{% block title %}Parametrlər · PhishGuard{% endblock %}
-{% block page_title %}Parametrlər{% endblock %}
+{% block title %}Settings · PhishGuard{% endblock %}
+{% block page_title %}Settings{% endblock %}
+{% block page_sub %}System configuration and user management.{% endblock %}
+{% block topbar_actions %}
+<a href="{{ url_for('settings.audit') }}" class="btn btn-outline btn-sm"><i class="bi bi-journal-text"></i> Audit log</a>
+{% endblock %}
 
 {% block content %}
-<div class="toolbar">
-    <span class="muted">Sistem parametrləri və istifadəçilər</span>
-    <a href="{{ url_for('settings.audit') }}" class="btn btn-outline">
-        <i class="bi bi-journal-text"></i> Audit log</a>
-</div>
-
-<div class="stat-grid">
+<div class="row-split" style="grid-template-columns:1fr 1fr">
     <section class="panel">
-        <div class="panel-head"><h2>Konfiqurasiya</h2></div>
+        <div class="panel-head"><h2><i class="bi bi-sliders"></i> Configuration</h2></div>
         <table class="kv">
-            <tr><td>Demo rejim</td><td>{{ 'Aktiv' if config.demo_mode else 'Deaktiv' }}</td></tr>
-            <tr><td>GoPhish</td><td>{{ 'Konfiqurasiya olunub' if config.gophish_configured else 'Yoxdur' }} ({{ config.gophish.mode }})</td></tr>
-            <tr><td>Mailtrap</td><td>{{ 'Konfiqurasiya olunub' if config.mailtrap else 'Yoxdur' }}</td></tr>
+            <tr><td>Demo mode</td><td>{{ 'On' if config.demo_mode else 'Off' }}</td></tr>
+            <tr><td>GoPhish</td><td>{{ 'Configured' if config.gophish_configured else 'Not set' }} ({{ config.gophish.mode }})</td></tr>
+            <tr><td>Mailtrap</td><td>{{ 'Configured' if config.mailtrap else 'Not set' }}</td></tr>
         </table>
-        <p class="muted" style="font-size:.8rem">Sirrlər (API açarı, parollar) yalnız
-            <code>.env</code> faylında saxlanılır, burada göstərilmir.</p>
+        <p class="muted" style="font-size:.78rem;margin:1rem 0 0">Secrets (API keys, passwords) are kept only in
+            the <code>.env</code> file and are never shown here.</p>
     </section>
 
     <section class="panel">
-        <div class="panel-head"><h2>Yeni istifadəçi</h2></div>
+        <div class="panel-head"><h2><i class="bi bi-person-plus"></i> New user</h2></div>
         <form method="post">
             {{ form.hidden_tag() }}
             <div class="form-group">{{ form.name.label(class="form-label") }}{{ form.name(class="form-control") }}</div>
@@ -39,28 +37,30 @@
 </div>
 
 <section class="panel">
-    <div class="panel-head"><h2>İstifadəçilər</h2></div>
+    <div class="panel-head"><h2><i class="bi bi-people"></i> Users</h2></div>
+    <div class="table-wrap">
     <table class="table-clean">
-        <thead><tr><th>Ad</th><th>Email</th><th>Rol</th><th>Status</th><th></th></tr></thead>
+        <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead>
         <tbody>
         {% for u in users %}
             <tr>
-                <td>{{ u.name }}</td>
-                <td>{{ u.email }}</td>
-                <td><span class="role-tag">{{ u.role }}</span></td>
-                <td>{% if u.active %}<span class="status status-aktiv">aktiv</span>
-                    {% else %}<span class="status status-qaralama">deaktiv</span>{% endif %}</td>
+                <td><div class="person"><span class="avatar">{{ u.name[:1] | upper }}</span><span class="cell-title">{{ u.name }}</span></div></td>
+                <td class="muted">{{ u.email }}</td>
+                <td><span class="tag">{{ u.role }}</span></td>
+                <td>{% if u.active %}<span class="status status-active">active</span>
+                    {% else %}<span class="status status-draft">inactive</span>{% endif %}</td>
                 <td class="row-actions">
                     {% if u.id != current_user.id %}
-                    <form method="post" action="{{ url_for('settings.toggle_user', uid=u.id) }}" style="display:inline">
+                    <form method="post" action="{{ url_for('settings.toggle_user', uid=u.id) }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button class="btn btn-outline btn-sm">{{ 'Deaktiv et' if u.active else 'Aktiv et' }}</button>
+                        <button class="btn btn-outline btn-sm">{{ 'Deactivate' if u.active else 'Activate' }}</button>
                     </form>
-                    {% else %}<span class="muted">siz</span>{% endif %}
+                    {% else %}<span class="muted">you</span>{% endif %}
                 </td>
             </tr>
         {% endfor %}
         </tbody>
     </table>
+    </div>
 </section>
 {% endblock %}

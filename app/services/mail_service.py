@@ -13,7 +13,7 @@ from flask import current_app
 # (NOT with Jinja) so user-supplied templates can never execute code.
 SAMPLE_CONTEXT = {
     "first_name": "Aysel",
-    "last_name": "Məmmədova",
+    "last_name": "Mammadova",
     "email": "aysel.mammadova@example.com",
     "department": "IT",
 }
@@ -38,8 +38,8 @@ def is_mailtrap_configured() -> bool:
 def send_test_email(to_email, subject, html_body, from_name, from_email):
     """Send one test email via Mailtrap. Returns (ok, message)."""
     if not is_mailtrap_configured():
-        return False, ("Mailtrap konfiqurasiya olunmayıb. .env faylında "
-                       "MAILTRAP_USERNAME və MAILTRAP_PASSWORD təyin edin.")
+        return False, ("Mailtrap is not configured. Set MAILTRAP_USERNAME and "
+                       "MAILTRAP_PASSWORD in the .env file.")
 
     cfg = current_app.config
     msg = MIMEMultipart("alternative")
@@ -53,6 +53,6 @@ def send_test_email(to_email, subject, html_body, from_name, from_email):
             s.starttls()
             s.login(cfg["MAILTRAP_USERNAME"], cfg["MAILTRAP_PASSWORD"])
             s.sendmail(from_email, [to_email], msg.as_string())
-        return True, f"Test email Mailtrap sandbox-a göndərildi: {to_email}"
+        return True, f"Test email sent to the Mailtrap sandbox: {to_email}"
     except Exception as exc:  # noqa: BLE001  (show a friendly message)
-        return False, f"Göndərmə alınmadı: {exc}"
+        return False, f"Sending failed: {exc}"

@@ -4,6 +4,7 @@ create_app() builds and configures the Flask app. This pattern keeps the
 app easy to test and lets us register modules (blueprints) one by one.
 """
 import os
+from datetime import date
 
 from flask import Flask, render_template, redirect, url_for, request
 from flask_login import current_user
@@ -43,10 +44,11 @@ def create_app(config_name: str | None = None, test_config: dict | None = None) 
         from app.models import User
         return db.session.get(User, int(user_id))
 
-    # Every page requires login except the login page, static files and health.
+    # Every page requires login except the public landing page, the login
+    # page, static files and health.
     @app.before_request
     def require_login():
-        if request.endpoint in ("auth.login", "static", "health"):
+        if request.endpoint in ("landing.index", "auth.login", "static", "health"):
             return
         if not current_user.is_authenticated:
             return redirect(url_for("auth.login", next=request.path))
@@ -55,6 +57,7 @@ def create_app(config_name: str | None = None, test_config: dict | None = None) 
 
 
 def _register_blueprints(app: Flask) -> None:
+    from .blueprints.landing.routes import landing_bp
     from .blueprints.auth.routes import auth_bp
     from .blueprints.dashboard.routes import dashboard_bp
     from .blueprints.campaigns.routes import campaigns_bp
@@ -67,6 +70,7 @@ def _register_blueprints(app: Flask) -> None:
     from .blueprints.settings.routes import settings_bp
     from .blueprints.risk.routes import risk_bp
 
+    app.register_blueprint(landing_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(campaigns_bp)
@@ -81,6 +85,11 @@ def _register_blueprints(app: Flask) -> None:
 
 
 def _register_misc(app: Flask) -> None:
+    @app.context_processor
+    def inject_globals():
+        from app.services.gophish_service import demo_mode_active
+        return {"demo_mode": demo_mode_active(), "today": date.today()}
+
     @app.route("/health")
     def health():
         """Health-check endpoint used by Render and uptime monitors."""

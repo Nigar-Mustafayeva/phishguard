@@ -55,9 +55,9 @@ def create():
         db.session.add(AuditLog(user_id=current_user.id, action="campaign_create",
                                 detail=camp.name, ip_address=request.remote_addr))
         db.session.commit()
-        flash("Kampaniya qaralama kimi yaradıldı.", "success")
+        flash("Campaign created as a draft.", "success")
         return redirect(url_for("campaigns.detail", cid=camp.id))
-    return render_template("campaigns/form.html", form=form, title="Yeni kampaniya")
+    return render_template("campaigns/form.html", form=form, title="New campaign")
 
 
 @campaigns_bp.route("/<int:cid>")
@@ -78,7 +78,7 @@ def detail(cid):
 def edit(cid):
     camp = db.session.get(Campaign, cid) or abort(404)
     if camp.status != STATUS_DRAFT:
-        flash("Yalnız qaralama kampaniyalar redaktə oluna bilər.", "danger")
+        flash("Only draft campaigns can be edited.", "danger")
         return redirect(url_for("campaigns.detail", cid=camp.id))
 
     form = CampaignForm(obj=camp)
@@ -96,10 +96,10 @@ def edit(cid):
         db.session.add(AuditLog(user_id=current_user.id, action="campaign_edit",
                                 detail=camp.name, ip_address=request.remote_addr))
         db.session.commit()
-        flash("Kampaniya yeniləndi.", "success")
+        flash("Campaign updated.", "success")
         return redirect(url_for("campaigns.detail", cid=camp.id))
     return render_template("campaigns/form.html", form=form,
-                          title="Kampaniyanı redaktə et")
+                          title="Edit campaign")
 
 
 @campaigns_bp.route("/<int:cid>/launch", methods=["POST"])
@@ -109,14 +109,14 @@ def launch(cid):
 
     # Guard rails: prevent duplicate / invalid launches.
     if camp.status != STATUS_DRAFT:
-        flash("Bu kampaniya artıq başladılıb və ya tamamlanıb.", "danger")
+        flash("This campaign has already been launched or completed.", "danger")
         return redirect(url_for("campaigns.detail", cid=camp.id))
     if not camp.template_id:
-        flash("Başlatmadan əvvəl şablon seçin.", "danger")
+        flash("Choose a template before launching.", "danger")
         return redirect(url_for("campaigns.detail", cid=camp.id))
     links = CampaignParticipant.query.filter_by(campaign_id=camp.id).all()
     if not links:
-        flash("Başlatmadan əvvəl ən azı bir iştirakçı əlavə edin.", "danger")
+        flash("Add at least one participant before launching.", "danger")
         return redirect(url_for("campaigns.detail", cid=camp.id))
 
     camp.status = STATUS_ACTIVE
@@ -127,10 +127,10 @@ def launch(cid):
                                      participant_id=cp.participant_id,
                                      event_type=EVENT_SENT, source="demo"))
     db.session.add(AuditLog(user_id=current_user.id, action="campaign_launch",
-                            detail=f"{camp.name} ({len(links)} iştirakçı)",
+                            detail=f"{camp.name} ({len(links)} participants)",
                             ip_address=request.remote_addr))
     db.session.commit()
-    flash(f"Kampaniya başladıldı (demo): {len(links)} email qeydə alındı.", "success")
+    flash(f"Campaign launched (demo): {len(links)} emails recorded.", "success")
     return redirect(url_for("campaigns.detail", cid=camp.id))
 
 
@@ -139,13 +139,13 @@ def launch(cid):
 def stop(cid):
     camp = db.session.get(Campaign, cid) or abort(404)
     if camp.status != STATUS_ACTIVE:
-        flash("Yalnız aktiv kampaniya dayandırıla bilər.", "danger")
+        flash("Only an active campaign can be stopped.", "danger")
         return redirect(url_for("campaigns.detail", cid=camp.id))
     camp.status = STATUS_COMPLETED
     db.session.add(AuditLog(user_id=current_user.id, action="campaign_stop",
                             detail=camp.name, ip_address=request.remote_addr))
     db.session.commit()
-    flash("Kampaniya dayandırıldı (tamamlandı).", "success")
+    flash("Campaign stopped (completed).", "success")
     return redirect(url_for("campaigns.detail", cid=camp.id))
 
 
@@ -154,7 +154,7 @@ def stop(cid):
 def sync(cid):
     camp = db.session.get(Campaign, cid) or abort(404)
     if camp.status == STATUS_DRAFT:
-        flash("Qaralama kampaniyanı sinxronlaşdırmaq olmaz. Əvvəlcə başladın.",
+        flash("A draft campaign cannot be synced. Launch it first.",
               "danger")
         return redirect(url_for("campaigns.detail", cid=camp.id))
     try:
@@ -164,7 +164,7 @@ def sync(cid):
         db.session.commit()
         flash(message, "success")
     except gophish_service.GoPhishError as exc:
-        flash(f"Sinxronlaşdırma alınmadı: {exc}", "danger")
+        flash(f"Sync failed: {exc}", "danger")
     return redirect(url_for("campaigns.detail", cid=camp.id))
 
 
@@ -174,12 +174,12 @@ def sync(cid):
 def delete(cid):
     camp = db.session.get(Campaign, cid) or abort(404)
     if camp.status != STATUS_DRAFT:
-        flash("Yalnız qaralama kampaniyalar silinə bilər.", "danger")
+        flash("Only draft campaigns can be deleted.", "danger")
         return redirect(url_for("campaigns.detail", cid=camp.id))
     name = camp.name
     db.session.delete(camp)
     db.session.add(AuditLog(user_id=current_user.id, action="campaign_delete",
                             detail=name, ip_address=request.remote_addr))
     db.session.commit()
-    flash("Kampaniya silindi.", "success")
+    flash("Campaign deleted.", "success")
     return redirect(url_for("campaigns.index"))

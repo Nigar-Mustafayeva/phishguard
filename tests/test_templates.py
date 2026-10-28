@@ -30,7 +30,7 @@ def test_test_email_blocked_without_mailtrap(auth_client, app):
     resp = auth_client.post(f"/templates/{tid}/preview",
                             data={"recipient": "x@example.com"},
                             follow_redirects=True)
-    assert "konfiqurasiya".encode() in resp.data
+    assert b"not configured" in resp.data
 
 
 def test_analyst_cannot_delete_template(auth_client, analyst_client, app):

@@ -19,7 +19,7 @@ def test_duplicate_participant_rejected(auth_client):
             "email": "dup@example.com", "department": "IT"}
     auth_client.post("/participants/new", data=data, follow_redirects=True)
     resp = auth_client.post("/participants/new", data=data, follow_redirects=True)
-    assert "artıq mövcud".encode() in resp.data
+    assert b"already exists" in resp.data
 
 
 def test_invalid_email_rejected(auth_client, app):

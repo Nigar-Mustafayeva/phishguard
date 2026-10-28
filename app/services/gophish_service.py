@@ -60,29 +60,29 @@ def _request(path: str):
 def check_status() -> dict:
     """Return a status dict for the UI (never raises)."""
     if demo_mode_active():
-        reason = "DEMO_MODE aktivdir" if current_app.config.get("DEMO_MODE", True) \
-            else "GoPhish konfiqurasiya olunmayıb"
+        reason = "DEMO_MODE is on" if current_app.config.get("DEMO_MODE", True) \
+            else "GoPhish is not configured"
         return {"mode": "demo", "reachable": False,
-                "message": f"Demo rejim — sintetik data ({reason})."}
+                "message": f"Demo mode — synthetic data ({reason})."}
     try:
         resp = _request("/api/campaigns/")
     except requests.RequestException as exc:
         return {"mode": "live", "reachable": False,
-                "message": f"GoPhish-ə qoşulmaq alınmadı: {exc}"}
+                "message": f"Could not connect to GoPhish: {exc}"}
     if resp.status_code == 200:
         return {"mode": "live", "reachable": True,
-                "message": "GoPhish əlçatandır."}
+                "message": "GoPhish is reachable."}
     if resp.status_code in (401, 403):
         return {"mode": "live", "reachable": False,
-                "message": "API açarı yanlışdır (401/403)."}
+                "message": "Invalid API key (401/403)."}
     return {"mode": "live", "reachable": False,
-            "message": f"GoPhish cavabı: HTTP {resp.status_code}."}
+            "message": f"GoPhish responded: HTTP {resp.status_code}."}
 
 
 def fetch_campaigns() -> list:
     """List GoPhish campaigns (live mode only): [{id, name, status}, ...]."""
     if demo_mode_active():
-        raise GoPhishError("Demo rejimdə GoPhish siyahısı mövcud deyil.")
+        raise GoPhishError("The GoPhish campaign list is not available in demo mode.")
     resp = _request("/api/campaigns/")
     if resp.status_code != 200:
         raise GoPhishError(f"HTTP {resp.status_code}")
@@ -92,7 +92,7 @@ def fetch_campaigns() -> list:
 def fetch_campaign(gophish_id: int) -> dict:
     """Fetch one GoPhish campaign (incl. results + timeline)."""
     if demo_mode_active():
-        raise GoPhishError("Demo rejimdə GoPhish datası mövcud deyil.")
+        raise GoPhishError("GoPhish data is not available in demo mode.")
     resp = _request(f"/api/campaigns/{gophish_id}")
     if resp.status_code != 200:
         raise GoPhishError(f"GoPhish HTTP {resp.status_code}")
@@ -171,8 +171,8 @@ def import_campaign(gophish_id: int) -> str:
                                          occurred_at=camp.launched_at or datetime.utcnow()))
 
     db.session.commit()
-    return (f"GoPhish-dən import edildi: '{name}' — "
-            f"{len(email_to_pid)} iştirakçı ({new_participants} yeni), {events} hadisə.")
+    return (f"Imported from GoPhish: '{name}' — "
+            f"{len(email_to_pid)} participants ({new_participants} new), {events} events.")
 
 
 def _clear_source_events(campaign, source, keep_sent=True):
@@ -197,7 +197,7 @@ def _sync_demo(campaign) -> str:
     sent = CampaignEvent.query.filter_by(
         campaign_id=campaign.id, event_type=EVENT_SENT).all()
     if not sent:
-        return "Bu kampaniyada hələ 'göndərildi' hadisəsi yoxdur (əvvəlcə başladın)."
+        return "This campaign has no 'sent' events yet (launch it first)."
 
     _clear_source_events(campaign, source="demo", keep_sent=True)
 
@@ -221,13 +221,13 @@ def _sync_demo(campaign) -> str:
             reported += 1
 
     db.session.commit()
-    return (f"Demo sinxronlaşdırma: {opened} açıldı, {clicked} kliklədi, "
-            f"{submitted} form doldurdu, {reported} report etdi.")
+    return (f"Demo sync: {opened} opened, {clicked} clicked, "
+            f"{submitted} submitted, {reported} reported.")
 
 
 def _sync_live(campaign) -> str:
     if not campaign.gophish_campaign_id:
-        raise GoPhishError("Bu kampaniyaya GoPhish campaign ID təyin olunmayıb.")
+        raise GoPhishError("No GoPhish campaign ID is assigned to this campaign.")
     resp = _request(f"/api/campaigns/{campaign.gophish_campaign_id}")
     if resp.status_code != 200:
         raise GoPhishError(f"GoPhish HTTP {resp.status_code}")
@@ -257,7 +257,7 @@ def _sync_live(campaign) -> str:
         imported += 1
 
     db.session.commit()
-    return f"GoPhish sinxronlaşdırma: {imported} hadisə yeniləndi."
+    return f"GoPhish sync: {imported} events updated."
 
 
 def _add(campaign_id, participant_id, event_type, when):

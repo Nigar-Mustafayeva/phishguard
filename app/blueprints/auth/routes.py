@@ -32,7 +32,7 @@ def login():
                 next_page = url_for("dashboard.index")
             return redirect(next_page)
 
-        flash("Email və ya şifrə yanlışdır.", "danger")
+        flash("Invalid email or password.", "danger")
 
     return render_template("auth/login.html", form=form)
 
@@ -44,5 +44,5 @@ def logout():
                             ip_address=request.remote_addr))
     db.session.commit()
     logout_user()
-    flash("Çıxış etdiniz.", "success")
+    flash("You have been signed out.", "success")
     return redirect(url_for("auth.login"))

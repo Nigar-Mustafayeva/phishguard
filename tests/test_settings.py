@@ -29,7 +29,7 @@ def test_admin_cannot_deactivate_self(auth_client, app):
         admin = User.query.filter_by(email="admin@example.com").first()
         aid = admin.id
     resp = auth_client.post(f"/settings/users/{aid}/toggle", follow_redirects=True)
-    assert "Öz hesabınızı".encode() in resp.data
+    assert b"cannot deactivate your own account" in resp.data
     with app.app_context():
         from app.models import User
         assert db.session.get(User, aid).active is True

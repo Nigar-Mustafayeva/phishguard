@@ -11,31 +11,31 @@ from app.models import User, ROLE_ADMIN
 
 def register_commands(app):
     @app.cli.command("create-admin")
-    @click.option("--name", prompt="Ad", help="Admin's display name")
+    @click.option("--name", prompt="Name", help="Admin's display name")
     @click.option("--email", prompt="Email", help="Login email")
-    @click.option("--password", prompt="Şifrə", hide_input=True,
+    @click.option("--password", prompt="Password", hide_input=True,
                   confirmation_prompt=True, help="Admin password")
     def create_admin(name, email, password):
         """Create an administrator account (password is never stored in code)."""
         email = email.lower().strip()
         if User.query.filter_by(email=email).first():
-            click.echo(f"Xəta: {email} artıq mövcuddur.")
+            click.echo(f"Error: {email} already exists.")
             return
         if len(password) < 8:
-            click.echo("Xəta: şifrə ən az 8 simvol olmalıdır.")
+            click.echo("Error: password must be at least 8 characters.")
             return
         user = User(name=name, email=email, role=ROLE_ADMIN)
         user.set_password(password)
         db.session.add(user)
         db.session.commit()
-        click.echo(f"Admin yaradıldı: {email}")
+        click.echo(f"Admin created: {email}")
 
     @app.cli.command("seed-training")
     def seed_training_cmd():
         """Add training modules (idempotent — does not delete existing data)."""
         from app.services.training_content import seed_training
         created = seed_training()
-        click.echo(f"{created} yeni təlim modulu əlavə olundu.")
+        click.echo(f"{created} new training modules added.")
 
     @app.cli.command("init-app")
     def init_app_cmd():
@@ -56,17 +56,17 @@ def register_commands(app):
                 u.set_password(password)
                 db.session.add(u)
                 db.session.commit()
-                click.echo(f"Admin yaradıldı: {email}")
+                click.echo(f"Admin created: {email}")
             else:
-                click.echo("Admin yaradılmadı (ADMIN_EMAIL/ADMIN_PASSWORD təyin edilməyib).")
+                click.echo("Admin not created (ADMIN_EMAIL/ADMIN_PASSWORD not set).")
 
         # 2. Demo data (only if empty and enabled).
         if os.environ.get("SEED_DEMO", "true").lower() == "true":
             from app.services.demo_seed import seed_demo
             seeded = seed_demo(reset=False)
-            click.echo("Demo data əlavə olundu." if seeded
-                       else "Demo data artıq mövcuddur (ötürüldü).")
+            click.echo("Demo data added." if seeded
+                       else "Demo data already present (skipped).")
         else:
             from app.services.training_content import seed_training
             seed_training()
-        click.echo("init-app tamamlandı.")
+        click.echo("init-app finished.")

@@ -1,45 +1,49 @@
 {% extends "base.html" %}
-{% block title %}Kampaniyalar · PhishGuard{% endblock %}
-{% block page_title %}Kampaniyalar{% endblock %}
-
-{% macro status_badge(s) %}
-    {% if s == "active" %}<span class="status status-aktiv">Aktiv</span>
-    {% elif s == "completed" %}<span class="status status-tamamlandı">Tamamlandı</span>
-    {% elif s == "stopped" %}<span class="status status-qaralama">Dayandırıldı</span>
-    {% else %}<span class="status status-qaralama">Qaralama</span>{% endif %}
-{% endmacro %}
+{% import "_macros.html" as ui %}
+{% block title %}Campaigns · PhishGuard{% endblock %}
+{% block page_title %}Campaigns{% endblock %}
+{% block page_sub %}Create, launch and track phishing simulations.{% endblock %}
 
 {% block content %}
 <div class="toolbar">
-    <span class="muted">{{ campaigns|length }} kampaniya</span>
+    <span class="count"><strong>{{ campaigns|length }}</strong> campaigns</span>
     <a href="{{ url_for('campaigns.create') }}" class="btn btn-primary">
-        <i class="bi bi-plus-lg"></i> Yeni kampaniya
+        <i class="bi bi-plus-lg"></i> New campaign
     </a>
 </div>
 
 <section class="panel">
     {% if campaigns %}
+    <div class="table-wrap">
     <table class="table-clean">
-        <thead><tr><th>Ad</th><th>Status</th><th>Şablon</th><th>İştirakçı</th><th></th></tr></thead>
+        <thead><tr><th>Campaign</th><th>Status</th><th>Template</th><th class="num">Participants</th><th></th></tr></thead>
         <tbody>
         {% for c in campaigns %}
             <tr>
-                <td><a href="{{ url_for('campaigns.detail', cid=c.id) }}">{{ c.name }}</a></td>
-                <td>{{ status_badge(c.status) }}</td>
+                <td>
+                    <a class="cell-link" href="{{ url_for('campaigns.detail', cid=c.id) }}" title="{{ c.name }}">
+                        <span class="stat-icon bg-blue" style="width:30px;height:30px;font-size:.85rem"><i class="bi bi-send"></i></span>
+                        {{ c.name }}
+                    </a>
+                </td>
+                <td>{{ ui.status_badge(c.status) }}</td>
                 <td class="muted">{{ c.template.name if c.template else "—" }}</td>
-                <td>{{ c.participants|length }}</td>
+                <td class="num">{{ c.participants|length }}</td>
                 <td class="row-actions">
-                    <a href="{{ url_for('campaigns.detail', cid=c.id) }}" class="icon-link" title="Bax"><i class="bi bi-eye"></i></a>
+                    <a href="{{ url_for('results.detail', cid=c.id) }}" class="icon-link" title="Results"><i class="bi bi-funnel"></i></a>
+                    <a href="{{ url_for('campaigns.detail', cid=c.id) }}" class="icon-link" title="View"><i class="bi bi-eye"></i></a>
                 </td>
             </tr>
         {% endfor %}
         </tbody>
     </table>
+    </div>
     {% else %}
     <div class="empty-state">
-        <i class="bi bi-send empty-icon"></i>
-        <h2>Hələ kampaniya yoxdur</h2>
-        <p class="muted">İlk simulyasiya kampaniyanı yaradın.</p>
+        <span class="empty-icon"><i class="bi bi-send"></i></span>
+        <h2>No campaigns yet</h2>
+        <p class="muted">Create your first simulation campaign.</p>
+        <a href="{{ url_for('campaigns.create') }}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> New campaign</a>
     </div>
     {% endif %}
 </section>

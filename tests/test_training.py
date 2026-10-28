@@ -47,3 +47,25 @@ def test_seed_training_is_idempotent(app):
         st(); first = TrainingModule.query.count()
         st(); second = TrainingModule.query.count()
         assert first == second
+
+
+def test_seed_training_refreshes_existing_module(app):
+    with app.app_context():
+        from app.extensions import db
+        from app.services.training_content import seed_training as st
+        from app.models import TrainingModule
+        st()
+        mod = TrainingModule.query.filter_by(slug="phishing-basics").first()
+        mod.title = "Old title"
+        mod.questions[0].question = "Old question"
+        db.session.commit()
+        st()
+        mod = TrainingModule.query.filter_by(slug="phishing-basics").first()
+        assert mod.title == "Recognising phishing red flags"
+        assert mod.questions[0].question != "Old question"
+
+
+def test_lab_page_loads(auth_client):
+    resp = auth_client.get("/training/lab")
+    assert resp.status_code == 200
+    assert b"Phishing inbox lab" in resp.data

@@ -1,52 +1,50 @@
 {% extends "base.html" %}
-{% block title %}{{ camp.name }} nəticələri · PhishGuard{% endblock %}
-{% block page_title %}Nəticələr: {{ camp.name }}{% endblock %}
-
-{% macro ev_label(t) %}
-    {% if t == "sent" %}Göndərildi{% elif t == "delivered" %}Çatdırıldı
-    {% elif t == "opened" %}Açıldı{% elif t == "clicked" %}Kliklədi
-    {% elif t == "submitted" %}Form doldurdu{% elif t == "reported" %}Report etdi
-    {% else %}{{ t }}{% endif %}
-{% endmacro %}
+{% import "_macros.html" as ui %}
+{% block title %}{{ camp.name }} results · PhishGuard{% endblock %}
+{% block page_title %}{{ camp.name }}{% endblock %}
+{% block page_sub %}Campaign results and event timeline{% endblock %}
 
 {% block content %}
 <div class="toolbar">
-    <a href="{{ url_for('results.index') }}" class="btn btn-outline">← Bütün nəticələr</a>
-    <a href="{{ url_for('campaigns.detail', cid=camp.id) }}" class="btn btn-outline">Kampaniya</a>
+    <a href="{{ url_for('results.index') }}" class="back-link"><i class="bi bi-arrow-left"></i> All results</a>
+    <a href="{{ url_for('campaigns.detail', cid=camp.id) }}" class="btn btn-outline"><i class="bi bi-send"></i> Campaign</a>
 </div>
 
 <!-- Funnel -->
 <section class="panel">
-    <div class="panel-head"><h2>Funnel</h2></div>
+    <div class="panel-head"><h2><i class="bi bi-funnel"></i> Funnel</h2></div>
     <div class="funnel">
-        <div class="funnel-step"><span>{{ metrics.sent }}</span>Göndərildi<small>100%</small></div>
-        <div class="funnel-step"><span>{{ metrics.opened }}</span>Açıldı<small>{{ metrics.open_rate }}%</small></div>
-        <div class="funnel-step"><span>{{ metrics.clicked }}</span>Kliklədi<small>{{ metrics.click_rate }}%</small></div>
-        <div class="funnel-step danger"><span>{{ metrics.submitted }}</span>Form<small>{{ metrics.submit_rate }}%</small></div>
-        <div class="funnel-step good"><span>{{ metrics.reported }}</span>Report<small>{{ metrics.report_rate }}%</small></div>
+        <div class="funnel-step"><span>{{ metrics.sent }}</span>Sent<small>100%</small></div>
+        <div class="funnel-step"><span>{{ metrics.opened }}</span>Opened<small>{{ metrics.open_rate }}%</small></div>
+        <div class="funnel-step"><span>{{ metrics.clicked }}</span>Clicked<small>{{ metrics.click_rate }}%</small></div>
+        <div class="funnel-step danger"><span>{{ metrics.submitted }}</span>Submitted<small>{{ metrics.submit_rate }}%</small></div>
+        <div class="funnel-step good"><span>{{ metrics.reported }}</span>Reported<small>{{ metrics.report_rate }}%</small></div>
     </div>
 </section>
 
 <!-- Event timeline -->
 <section class="panel">
-    <div class="panel-head"><h2>Hadisə timeline</h2>
-        <span class="muted">Son {{ events|length }} hadisə</span></div>
+    <div class="panel-head"><div><h2><i class="bi bi-clock-history"></i> Event timeline</h2>
+        <span class="muted">Latest {{ events|length }} events</span></div></div>
     {% if events %}
+    <div class="table-wrap">
     <table class="table-clean">
-        <thead><tr><th>Vaxt</th><th>İştirakçı</th><th>Hadisə</th><th>Mənbə</th></tr></thead>
+        <thead><tr><th>Time</th><th>Participant</th><th>Event</th><th>Source</th></tr></thead>
         <tbody>
         {% for e in events %}
+            {% set cls = {'reported': 'status-active', 'clicked': 'status-warn', 'submitted': 'status-stopped', 'opened': 'status-completed'}.get(e.event_type, 'status-draft') %}
             <tr>
-                <td class="muted">{{ e.occurred_at.strftime("%Y-%m-%d %H:%M") }}</td>
-                <td>{{ e.participant.full_name if e.participant else "—" }}</td>
-                <td><span class="status status-{{ 'aktiv' if e.event_type == 'reported' else 'qaralama' }}">{{ ev_label(e.event_type) }}</span></td>
-                <td class="muted">{{ e.source }}</td>
+                <td class="muted num">{{ e.occurred_at.strftime("%d %b %Y, %H:%M") }}</td>
+                <td class="cell-title">{{ e.participant.full_name if e.participant else "—" }}</td>
+                <td><span class="status {{ cls }}">{{ ui.event_label(e.event_type) }}</span></td>
+                <td><span class="tag">{{ e.source }}</span></td>
             </tr>
         {% endfor %}
         </tbody>
     </table>
+    </div>
     {% else %}
-    <p class="muted">Bu kampaniyada hadisə yoxdur.</p>
+    <p class="muted">No events for this campaign.</p>
     {% endif %}
 </section>
 {% endblock %}

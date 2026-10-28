@@ -47,7 +47,7 @@ def create():
     if form.validate_on_submit():
         email = form.email.data.lower().strip()
         if Participant.query.filter_by(email=email).first():
-            flash("Bu email ilə iştirakçı artıq mövcuddur.", "danger")
+            flash("A participant with this email already exists.", "danger")
         else:
             p = Participant(
                 first_name=form.first_name.data.strip(),
@@ -61,10 +61,10 @@ def create():
                                     action="participant_create", detail=email,
                                     ip_address=request.remote_addr))
             db.session.commit()
-            flash("İştirakçı əlavə olundu.", "success")
+            flash("Participant added.", "success")
             return redirect(url_for("participants.index"))
     return render_template("participants/form.html", form=form,
-                          title="Yeni iştirakçı")
+                          title="New participant")
 
 
 @participants_bp.route("/<int:pid>/edit", methods=["GET", "POST"])
@@ -78,7 +78,7 @@ def edit(pid):
         email = form.email.data.lower().strip()
         existing = Participant.query.filter_by(email=email).first()
         if existing and existing.id != p.id:
-            flash("Bu email başqa iştirakçıya aiddir.", "danger")
+            flash("This email belongs to another participant.", "danger")
         else:
             p.first_name = form.first_name.data.strip()
             p.last_name = form.last_name.data.strip()
@@ -88,10 +88,10 @@ def edit(pid):
                                     action="participant_edit", detail=email,
                                     ip_address=request.remote_addr))
             db.session.commit()
-            flash("İştirakçı yeniləndi.", "success")
+            flash("Participant updated.", "success")
             return redirect(url_for("participants.index"))
     return render_template("participants/form.html", form=form,
-                          title="İştirakçını redaktə et")
+                          title="Edit participant")
 
 
 @participants_bp.route("/<int:pid>/delete", methods=["POST"])
@@ -104,7 +104,7 @@ def delete(pid):
     db.session.add(AuditLog(user_id=current_user.id, action="participant_delete",
                             detail=email, ip_address=request.remote_addr))
     db.session.commit()
-    flash("İştirakçı silindi.", "success")
+    flash("Participant deleted.", "success")
     return redirect(url_for("participants.index"))
 
 
@@ -116,7 +116,7 @@ def import_csv():
         try:
             raw = form.file.data.stream.read().decode("utf-8-sig")
         except UnicodeDecodeError:
-            flash("Fayl UTF-8 kodlaşmasında olmalıdır.", "danger")
+            flash("The file must be UTF-8 encoded.", "danger")
             return render_template("participants/import.html", form=form,
                                   columns=CSV_COLUMNS)
 
@@ -133,13 +133,13 @@ def import_csv():
 
             if not (fn and ln and em):
                 errors += 1
-                error_rows.append((line_no, "boş sahə (ad/soyad/email)"))
+                error_rows.append((line_no, "empty field (first name/last name/email)"))
                 continue
             try:
                 validate_email(em, check_deliverability=False)
             except EmailNotValidError:
                 errors += 1
-                error_rows.append((line_no, "yanlış email formatı"))
+                error_rows.append((line_no, "invalid email format"))
                 continue
             if em in seen_in_file or Participant.query.filter_by(email=em).first():
                 skipped += 1
@@ -157,8 +157,8 @@ def import_csv():
             detail=f"imported={imported} skipped={skipped} errors={errors}",
             ip_address=request.remote_addr))
         db.session.commit()
-        flash(f"İmport tamamlandı: {imported} əlavə, {skipped} dublikat, "
-              f"{errors} xəta.", "success")
+        flash(f"Import finished: {imported} added, {skipped} duplicates, "
+              f"{errors} errors.", "success")
         return render_template("participants/import.html", form=CSVImportForm(),
                               columns=CSV_COLUMNS, done=True,
                               imported=imported, skipped=skipped,
@@ -173,8 +173,8 @@ def import_csv():
 def sample_csv():
     """Download a small example CSV with the expected columns."""
     sample = ("first_name,last_name,email,department\n"
-              "Aysel,Məmmədova,aysel.mammadova@example.com,IT\n"
-              "Rauf,Əliyev,rauf.aliyev@example.com,Maliyyə\n")
+              "Aysel,Mammadova,aysel.mammadova@example.com,IT\n"
+              "Rauf,Aliyev,rauf.aliyev@example.com,Finance\n")
     return Response(sample, mimetype="text/csv",
                     headers={"Content-Disposition":
                              "attachment; filename=participants_sample.csv"})

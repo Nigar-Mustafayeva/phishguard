@@ -5,9 +5,9 @@ from wtforms.validators import DataRequired, Length, Optional
 
 
 class CampaignForm(FlaskForm):
-    name = StringField("Kampaniya adı", validators=[DataRequired(), Length(max=150)])
-    description = TextAreaField("Təsvir", validators=[Optional()])
-    template_id = SelectField("Email şablonu", coerce=int,
-                              validators=[DataRequired(message="Şablon seçin")])
-    participant_ids = SelectMultipleField("İştirakçılar", coerce=int)
-    submit = SubmitField("Yadda saxla")
+    name = StringField("Campaign name", validators=[DataRequired(), Length(max=150)])
+    description = TextAreaField("Description", validators=[Optional()])
+    template_id = SelectField("Email template", coerce=int,
+                              validators=[DataRequired(message="Choose a template")])
+    participant_ids = SelectMultipleField("Participants", coerce=int)
+    submit = SubmitField("Save")

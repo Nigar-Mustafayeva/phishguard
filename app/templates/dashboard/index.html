@@ -1,103 +1,188 @@
 {% extends "base.html" %}
+{% import "_macros.html" as ui %}
 {% block title %}Dashboard · PhishGuard{% endblock %}
 {% block page_title %}Dashboard{% endblock %}
-
-{% macro status_badge(s) %}
-    {% if s == "active" %}<span class="status status-aktiv">Aktiv</span>
-    {% elif s == "completed" %}<span class="status status-tamamlandı">Tamamlandı</span>
-    {% elif s == "stopped" %}<span class="status status-qaralama">Dayandırıldı</span>
-    {% else %}<span class="status status-qaralama">Qaralama</span>{% endif %}
-{% endmacro %}
+{% block page_sub %}Monitor campaigns, human risk and reporting behaviour in real time.{% endblock %}
+{% block topbar_actions %}
+<a href="{{ url_for('campaigns.create') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> New campaign</a>
+{% endblock %}
 
 {% block content %}
+{% if demo_mode %}
 <div class="demo-banner">
     <i class="bi bi-info-circle"></i>
-    Bütün rəqəmlər verilənlər bazasından hesablanır. Nümunə (demo) qeydlər
-    daxildir və platformanın digər səhifələrində <strong>demo</strong> kimi işarələnib.
+    <span>All figures are calculated from the database. Sample records are included and are
+    labelled <strong>demo</strong> throughout the platform.</span>
 </div>
+{% endif %}
 
 <!-- Stat cards -->
 <div class="stat-grid">
-    <div class="stat-card"><div class="stat-icon bg-blue"><i class="bi bi-send"></i></div>
-        <div><div class="stat-value">{{ stats.campaigns }}</div><div class="stat-label">Kampaniya</div></div></div>
-    <div class="stat-card"><div class="stat-icon bg-teal"><i class="bi bi-people"></i></div>
-        <div><div class="stat-value">{{ stats.participants }}</div><div class="stat-label">İştirakçı</div></div></div>
-    <div class="stat-card"><div class="stat-icon bg-navy"><i class="bi bi-envelope-check"></i></div>
-        <div><div class="stat-value">{{ stats.sent }}</div><div class="stat-label">Göndərilən email</div></div></div>
-    <div class="stat-card"><div class="stat-icon bg-amber"><i class="bi bi-cursor"></i></div>
-        <div><div class="stat-value">{{ stats.click_rate }}%</div><div class="stat-label">Klik faizi</div></div></div>
-    <div class="stat-card"><div class="stat-icon bg-green"><i class="bi bi-flag"></i></div>
-        <div><div class="stat-value">{{ stats.report_rate }}%</div><div class="stat-label">Report faizi</div></div></div>
-    <div class="stat-card"><div class="stat-icon bg-red"><i class="bi bi-exclamation-triangle"></i></div>
-        <div><div class="stat-value">{{ stats.submit_rate }}%</div><div class="stat-label">Form doldurma faizi</div></div></div>
+    {{ ui.stat("bi-send", "blue", stats.campaigns, "Campaigns") }}
+    {{ ui.stat("bi-people", "teal", stats.participants, "Participants") }}
+    {{ ui.stat("bi-envelope-check", "navy", stats.sent, "Emails sent") }}
+    {{ ui.stat("bi-cursor", "amber", stats.click_rate, "Click rate", "%", stats.click_rate) }}
+    {{ ui.stat("bi-flag", "green", stats.report_rate, "Report rate", "%", stats.report_rate) }}
+    {{ ui.stat("bi-exclamation-triangle", "red", stats.submit_rate, "Form submission rate", "%", stats.submit_rate) }}
 </div>
 
 <div class="row-split">
     <section class="panel">
-        <div class="panel-head"><h2>Kampaniyalar üzrə klik vs report</h2>
-            <span class="muted">Başladılmış kampaniyalar (%)</span></div>
+        <div class="panel-head">
+            <div><h2><i class="bi bi-bar-chart"></i> Click vs report rate by campaign</h2>
+                <span class="muted">Launched campaigns, % of emails sent</span></div>
+        </div>
         {% if chart.labels %}
-        <canvas id="activityChart" height="130"></canvas>
+        <div class="chart-box"><canvas id="activityChart"></canvas></div>
         {% else %}
-        <p class="muted">Hələ başladılmış kampaniya yoxdur.</p>
+        <p class="muted">No campaigns have been launched yet.</p>
         {% endif %}
     </section>
 
     <section class="panel">
-        <div class="panel-head"><h2>Son kampaniyalar</h2></div>
+        <div class="panel-head">
+            <div><h2><i class="bi bi-shield-exclamation"></i> Risk distribution</h2>
+                <span class="muted">{{ risk.count }} profiled participants · avg score {{ risk.avg }}</span></div>
+            <a href="{{ url_for('risk.index') }}" class="btn btn-ghost btn-sm">Details <i class="bi bi-arrow-right"></i></a>
+        </div>
+        {% if risk.count %}
+        <div class="chart-box sm"><canvas id="riskChart"></canvas></div>
+        {% else %}
+        <p class="muted">No risk data yet. Launch and sync a campaign.</p>
+        {% endif %}
+    </section>
+</div>
+
+<div class="row-split">
+    <section class="panel">
+        <div class="panel-head">
+            <div><h2><i class="bi bi-clock-history"></i> Recent campaigns</h2></div>
+            <a href="{{ url_for('campaigns.index') }}" class="btn btn-ghost btn-sm">View all <i class="bi bi-arrow-right"></i></a>
+        </div>
         {% if recent %}
+        <div class="table-wrap">
         <table class="table-clean">
-            <thead><tr><th>Ad</th><th>Status</th><th>Göndərildi</th><th>Klik</th></tr></thead>
+            <thead><tr><th>Campaign</th><th>Status</th><th class="num">Sent</th><th class="num">Clicks</th><th>Click rate</th></tr></thead>
             <tbody>
             {% for c in recent %}
-                <tr><td>{{ c.name }}</td><td>{{ status_badge(c.status) }}</td>
-                    <td>{{ c.sent }}</td><td>{{ c.clicks }}</td></tr>
+                <tr>
+                    <td><a class="cell-link" href="{{ url_for('campaigns.detail', cid=c.id) }}" title="{{ c.name }}">{{ c.name }}</a></td>
+                    <td>{{ ui.status_badge(c.status) }}</td>
+                    <td class="num">{{ c.sent }}</td>
+                    <td class="num">{{ c.clicks }}</td>
+                    <td><div class="risk-bar"><span class="fill-amber" style="width:{{ c.click_rate }}%"></span></div><strong class="num">{{ c.click_rate }}%</strong></td>
+                </tr>
             {% endfor %}
             </tbody>
         </table>
-        {% else %}<p class="muted">Kampaniya yoxdur.</p>{% endif %}
+        </div>
+        {% else %}<p class="muted">No campaigns yet.</p>{% endif %}
+    </section>
+
+    <section class="panel">
+        <div class="panel-head">
+            <div><h2><i class="bi bi-funnel"></i> Overall funnel</h2>
+                <span class="muted">Across all campaigns</span></div>
+        </div>
+        {% set steps = [("Sent", stats.sent, "blue"), ("Opened", stats.opened, "cyan"),
+                        ("Clicked", stats.clicked, "amber"), ("Submitted", stats.submitted, "red"),
+                        ("Reported", stats.reported, "green")] %}
+        <div style="display:grid;gap:.9rem">
+        {% for label, value, color in steps %}
+            {% set pct = (100 * value / stats.sent) | round(1) if stats.sent else 0 %}
+            <div>
+                <div class="flex" style="justify-content:space-between;font-size:.84rem;margin-bottom:.35rem">
+                    <span style="color:var(--text-2)">{{ label }}</span>
+                    <span><strong>{{ value }}</strong> <span class="muted">· {{ pct }}%</span></span>
+                </div>
+                <div class="stat-meter" style="height:8px"><span class="fill-{{ color }}" style="width:{{ pct }}%"></span></div>
+            </div>
+        {% endfor %}
+        </div>
     </section>
 </div>
 
 <section class="panel">
-    <div class="panel-head"><h2>Şöbə üzrə müqayisə</h2>
-        <span class="muted">Klik faizi = kliklədən iştirakçı / şöbədəki iştirakçı</span></div>
+    <div class="panel-head">
+        <div><h2><i class="bi bi-diagram-3"></i> Department comparison</h2>
+            <span class="muted">Click rate = participants who clicked / participants in the department</span></div>
+    </div>
     {% if departments %}
+    <div class="table-wrap">
     <table class="table-clean">
-        <thead><tr><th>Şöbə</th><th>İştirakçı</th><th>Kliklədi</th><th>Report etdi</th><th>Klik faizi</th></tr></thead>
+        <thead><tr><th>Department</th><th class="num">Participants</th><th class="num">Clicked</th><th class="num">Reported</th><th>Click rate</th></tr></thead>
         <tbody>
         {% for d in departments %}
+            {% set lvl = 'high' if d.click_rate >= 50 else ('medium' if d.click_rate >= 25 else 'low') %}
             <tr>
-                <td>{{ d.name }}</td>
-                <td>{{ d.participants }}{% if d.participants < 3 %} <span class="muted" title="Kiçik nümunə">*</span>{% endif %}</td>
-                <td>{{ d.clicked }}</td>
-                <td>{{ d.reported }}</td>
-                <td><strong>{{ d.click_rate }}%</strong></td>
+                <td class="cell-title">{{ d.name }}</td>
+                <td class="num">{{ d.participants }}{% if d.participants < 3 %} <span class="muted" title="Small sample">*</span>{% endif %}</td>
+                <td class="num">{{ d.clicked }}</td>
+                <td class="num">{{ d.reported }}</td>
+                <td><div class="risk-bar"><span class="risk-fill-{{ lvl }}" style="width:{{ d.click_rate }}%"></span></div><strong class="num">{{ d.click_rate }}%</strong></td>
             </tr>
         {% endfor %}
         </tbody>
     </table>
-    <small class="muted">* Nümunə həcmi kiçik olan şöbələrdə faizlər etibarlı deyil.</small>
-    {% else %}<p class="muted">Şöbə məlumatı yoxdur.</p>{% endif %}
+    </div>
+    <small class="muted">* Percentages for departments with a small sample size are not reliable.</small>
+    {% else %}<p class="muted">No department data yet.</p>{% endif %}
 </section>
 {% endblock %}
 
 {% block scripts %}
-{% if chart.labels %}
+{% if chart.labels or risk.count %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script>
+  Chart.defaults.color = '#7d889f';
+  Chart.defaults.font.family = 'Inter, system-ui, sans-serif';
+  Chart.defaults.borderColor = 'rgba(148,163,184,.1)';
+  const tooltip = { backgroundColor: '#141e34', borderColor: 'rgba(148,163,184,.25)', borderWidth: 1,
+                    titleColor: '#e6ebf5', bodyColor: '#b4bdd0', padding: 10, cornerRadius: 8 };
+
+  {% if chart.labels %}
+  const labels = {{ chart.labels | tojson }};
   new Chart(document.getElementById('activityChart'), {
     type: 'bar',
     data: {
-      labels: {{ chart.labels | tojson }},
+      labels: labels.map(l => l.length > 18 ? l.slice(0, 17) + '…' : l),
       datasets: [
-        { label: 'Klik faizi %', data: {{ chart.clicks | tojson }}, backgroundColor: '#2563eb', borderRadius: 6 },
-        { label: 'Report faizi %', data: {{ chart.reports | tojson }}, backgroundColor: '#14b8a6', borderRadius: 6 }
+        { label: 'Click rate %', data: {{ chart.clicks | tojson }}, backgroundColor: '#3b82f6',
+          borderRadius: 6, maxBarThickness: 28 },
+        { label: 'Report rate %', data: {{ chart.reports | tojson }}, backgroundColor: '#22d3ee',
+          borderRadius: 6, maxBarThickness: 28 }
       ]
     },
-    options: { responsive: true, plugins: { legend: { position: 'bottom' } },
-      scales: { y: { beginAtZero: true, ticks: { callback: v => v + '%' } } } }
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', boxWidth: 8 } },
+        tooltip: { ...tooltip, callbacks: { title: items => labels[items[0].dataIndex] } }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true } },
+        y: { beginAtZero: true, suggestedMax: 50, ticks: { callback: v => v + '%' } }
+      }
+    }
   });
+  {% endif %}
+
+  {% if risk.count %}
+  new Chart(document.getElementById('riskChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['High', 'Medium', 'Low'],
+      datasets: [{ data: [{{ risk.high }}, {{ risk.medium }}, {{ risk.low }}],
+                   backgroundColor: ['#ef4444', '#f59e0b', '#22c55e'],
+                   borderColor: '#0f1729', borderWidth: 4, hoverOffset: 6 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '68%',
+      plugins: { legend: { position: 'right', labels: { usePointStyle: true, pointStyle: 'circle', boxWidth: 8, padding: 14 } },
+                 tooltip: tooltip }
+    }
+  });
+  {% endif %}
 </script>
 {% endif %}
 {% endblock %}

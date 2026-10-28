@@ -1,61 +1,157 @@
 {% extends "base.html" %}
 {% block title %}{{ mod.title }} · PhishGuard{% endblock %}
 {% block page_title %}{{ mod.title }}{% endblock %}
+{% block page_sub %}{{ meta.summary }}{% endblock %}
 
 {% block content %}
 <div class="toolbar">
-    <a href="{{ url_for('training.index') }}" class="btn btn-outline">← Təlim modulları</a>
+    <div class="flex">
+        <a href="{{ url_for('training.index') }}" class="back-link"><i class="bi bi-arrow-left"></i> Training modules</a>
+        <span class="level level-{{ meta.level }}">{{ meta.level }}</span>
+        <span class="muted"><i class="bi bi-clock"></i> {{ meta.minutes }} min</span>
+    </div>
 </div>
 
-<section class="panel panel-narrow">
-    <div class="panel-head"><h2>Məqalə</h2></div>
-    <div class="article">{{ mod.content | replace("\n", "<br>") | safe }}</div>
-</section>
+<div class="module-layout">
+    <section class="panel">
+        <div class="panel-head"><h2><i class="bi {{ meta.icon }}"></i> Lesson</h2></div>
+        <div class="article">{{ article }}</div>
+    </section>
 
-{% if results is none %}
-<!-- Quiz form -->
-<section class="panel panel-narrow">
-    <div class="panel-head"><h2>Quiz</h2></div>
-    <form method="post">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        {% for q, options in questions_opts %}
-        <div class="quiz-q">
-            <p class="quiz-question">{{ loop.index }}. {{ q.question }}</p>
-            {% for key, text in options %}
-            <label class="quiz-option">
-                <input type="radio" name="q{{ q.id }}" value="{{ key }}" required>
-                <span>{{ text }}</span>
-            </label>
+    <div class="sticky">
+    {% if results is none %}
+    <!-- Quiz form: one question at a time when JavaScript is available -->
+    <section class="panel">
+        <div class="panel-head"><h2><i class="bi bi-patch-question"></i> Quiz</h2>
+            <span class="muted">{{ questions_opts|length }} questions</span></div>
+        <div class="quiz-progress">
+            <div class="progress-track"><span id="quizBar" style="width:0%"></span></div>
+            <span id="quizStep">1 / {{ questions_opts|length }}</span>
+        </div>
+        <form method="post" id="quizForm" class="quiz-stepper">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% for q, options in questions_opts %}
+            <div class="quiz-q {{ 'current' if loop.first }}" data-correct="{{ q.correct_option }}">
+                <p class="quiz-question">{{ loop.index }}. {{ q.question }}</p>
+                {% for key, text in options %}
+                <label class="quiz-option">
+                    <input type="radio" name="q{{ q.id }}" value="{{ key }}" required>
+                    <span class="quiz-key">{{ key }}</span>
+                    <span>{{ text }}</span>
+                </label>
+                {% endfor %}
+                <div class="quiz-feedback">
+                    <div class="explanation"><i class="bi bi-lightbulb"></i>
+                        <span><strong class="fb-title"></strong> {{ q.explanation }}</span></div>
+                </div>
+            </div>
             {% endfor %}
+            <div class="quiz-nav">
+                <button class="btn btn-primary" type="button" id="nextBtn" disabled>Next question <i class="bi bi-arrow-right"></i></button>
+            </div>
+            <div class="form-actions quiz-submit-fallback">
+                <button class="btn btn-primary" type="submit">Check answers</button>
+            </div>
+        </form>
+    </section>
+    {% else %}
+    <!-- Graded results -->
+    {% set pct = (100 * score / total) | round | int if total else 0 %}
+    <section class="panel">
+        <div class="score-banner {{ 'good' if score == total else 'partial' }}">
+            <div class="score-ring" style="--p:{{ pct }};{{ '' if score == total else '--ring:var(--amber)' }}"><span>{{ pct }}%</span></div>
+            <div>
+                <h3>Score: {{ score }}/{{ total }}{% if score == total %} — excellent!{% endif %}</h3>
+                <p>{% if score == total %}You spotted every trick in this module.
+                   {% else %}Review the explanations below, then try again.{% endif %}</p>
+            </div>
+        </div>
+        {% for r in results %}
+        <div class="quiz-q">
+            <p class="quiz-question">{{ loop.index }}. {{ r.q.question }}</p>
+            {% for key, text in r.options %}
+                <div class="quiz-review
+                    {% if key == r.q.correct_option %}correct{% elif key == r.chosen %}wrong{% endif %}">
+                    {% if key == r.q.correct_option %}<i class="bi bi-check-circle-fill"></i>
+                    {% elif key == r.chosen %}<i class="bi bi-x-circle-fill"></i>
+                    {% else %}<i class="bi bi-circle"></i>{% endif %}
+                    {{ text }}
+                </div>
+            {% endfor %}
+            <div class="explanation"><i class="bi bi-lightbulb"></i> <span>{{ r.q.explanation }}</span></div>
         </div>
         {% endfor %}
-        <button class="btn btn-primary" type="submit">Cavabları yoxla</button>
-    </form>
-</section>
+        <div class="form-actions">
+            <a href="{{ url_for('training.module', slug=mod.slug) }}" class="btn btn-outline"><i class="bi bi-arrow-repeat"></i> Try again</a>
+            {% if next_mod %}
+            <a href="{{ url_for('training.module', slug=next_mod.slug) }}" class="btn btn-primary">Next module <i class="bi bi-arrow-right"></i></a>
+            {% else %}
+            <a href="{{ url_for('training.lab') }}" class="btn btn-primary">Try the phishing lab <i class="bi bi-arrow-right"></i></a>
+            {% endif %}
+        </div>
+    </section>
+    {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if results is none %}
+<script>
+  // Stepper quiz: answer, see instant feedback, then move on. Submits at the end.
+  (function () {
+    const form = document.getElementById('quizForm');
+    const qs = [...form.querySelectorAll('.quiz-q')];
+    const next = document.getElementById('nextBtn');
+    const bar = document.getElementById('quizBar');
+    const step = document.getElementById('quizStep');
+    let i = 0;
+
+    function show(n) {
+      qs.forEach((q, k) => q.classList.toggle('current', k === n));
+      step.textContent = (n + 1) + ' / ' + qs.length;
+      bar.style.width = (n / qs.length * 100) + '%';
+      next.disabled = true;
+      next.innerHTML = n === qs.length - 1
+        ? 'See my score <i class="bi bi-check2"></i>'
+        : 'Next question <i class="bi bi-arrow-right"></i>';
+    }
+
+    qs.forEach(q => {
+      q.querySelectorAll('.quiz-option').forEach(opt => {
+        opt.addEventListener('click', () => {
+          if (opt.classList.contains('locked')) return;
+          const input = opt.querySelector('input');
+          input.checked = true;
+          const right = input.value === q.dataset.correct;
+          q.querySelectorAll('.quiz-option').forEach(o => {
+            o.classList.add('locked');
+            if (o.querySelector('input').value === q.dataset.correct) o.classList.add('is-correct');
+          });
+          if (!right) opt.classList.add('is-wrong');
+          const fb = q.querySelector('.quiz-feedback');
+          fb.querySelector('.fb-title').textContent = right ? 'Correct!' : 'Not quite.';
+          fb.classList.add('show');
+          bar.style.width = ((i + 1) / qs.length * 100) + '%';
+          next.disabled = false;
+        });
+      });
+    });
+
+    next.addEventListener('click', () => {
+      if (i < qs.length - 1) { i++; show(i); }
+      else form.submit();
+    });
+    show(0);
+  })();
+</script>
 {% else %}
-<!-- Graded results -->
-<section class="panel panel-narrow">
-    <div class="score-banner {{ 'good' if score == total else 'partial' }}">
-        Nəticə: <strong>{{ score }}/{{ total }}</strong>
-        {% if score == total %} — əla!{% endif %}
-    </div>
-    {% for r in results %}
-    <div class="quiz-q">
-        <p class="quiz-question">{{ loop.index }}. {{ r.q.question }}</p>
-        {% for key, text in r.options %}
-            <div class="quiz-review
-                {% if key == r.q.correct_option %}correct{% elif key == r.chosen %}wrong{% endif %}">
-                {% if key == r.q.correct_option %}<i class="bi bi-check-circle"></i>
-                {% elif key == r.chosen %}<i class="bi bi-x-circle"></i>
-                {% else %}<i class="bi bi-circle"></i>{% endif %}
-                {{ text }}
-            </div>
-        {% endfor %}
-        <div class="explanation"><i class="bi bi-lightbulb"></i> {{ r.q.explanation }}</div>
-    </div>
-    {% endfor %}
-    <a href="{{ url_for('training.module', slug=mod.slug) }}" class="btn btn-outline">Yenidən cəhd et</a>
-    <a href="{{ url_for('training.index') }}" class="btn btn-primary">Təlim modulları</a>
-</section>
+<script>
+  try {
+    const d = JSON.parse(localStorage.getItem('pg-training') || '{}');
+    d[{{ mod.slug | tojson }}] = '{{ score }}/{{ total }}';
+    localStorage.setItem('pg-training', JSON.stringify(d));
+  } catch (e) {}
+</script>
 {% endif %}
 {% endblock %}

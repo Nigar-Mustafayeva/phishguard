@@ -1,24 +1,83 @@
 {% extends "base.html" %}
-{% block title %}Təlim · PhishGuard{% endblock %}
-{% block page_title %}Təhlükəsizlik Təlimi{% endblock %}
+{% block title %}Training · PhishGuard{% endblock %}
+{% block page_title %}Security training{% endblock %}
+{% block page_sub %}Short modules with interactive quizzes and instant feedback.{% endblock %}
 
 {% block content %}
-{% if modules %}
+{% if cards %}
+<section class="training-hero">
+    <h2>Build phishing instincts, one module at a time</h2>
+    <p>Each module takes a few minutes: read the key points, then answer questions one by one and
+        get an explanation for every answer.</p>
+    <div class="hero-stats">
+        <div><strong>{{ cards|length }}</strong>modules</div>
+        <div><strong>{{ total_questions }}</strong>questions</div>
+        <div><strong>~{{ total_minutes }} min</strong>total time</div>
+        <div><strong>{{ total_attempts }}</strong>quiz attempts</div>
+    </div>
+    <div style="margin-top:1.4rem;max-width:520px">
+        <div class="flex" style="justify-content:space-between;font-size:.8rem;margin-bottom:.4rem">
+            <span class="muted">Your progress (this browser)</span>
+            <strong id="progressLabel">0 / {{ cards|length }}</strong>
+        </div>
+        <div class="progress-track"><span id="progressBar" style="width:0%"></span></div>
+    </div>
+</section>
+
 <div class="training-grid">
-    {% for m in modules %}
-    <a class="training-card" href="{{ url_for('training.module', slug=m.slug) }}">
-        <div class="training-icon"><i class="bi bi-mortarboard"></i></div>
-        <h3>{{ m.title }}</h3>
-        <p class="muted">{{ m.questions|length }} sual · quiz</p>
-        <span class="training-go">Başla <i class="bi bi-arrow-right"></i></span>
+    <a class="training-card lab-card" href="{{ url_for('training.lab') }}">
+        <span class="training-num">LAB</span>
+        <div class="training-icon"><i class="bi bi-inboxes"></i></div>
+        <h3>Phishing inbox lab</h3>
+        <p>Triage a realistic inbox: decide “phish or legit”, then inspect every clue.</p>
+        <div class="training-meta"><span class="level level-Intermediate">Interactive</span>
+            <span class="muted"><i class="bi bi-clock"></i> 5 min</span></div>
+        <span class="training-go">Open the lab <i class="bi bi-arrow-right"></i></span>
+    </a>
+    {% for c in cards %}
+    <a class="training-card" href="{{ url_for('training.module', slug=c.mod.slug) }}" data-slug="{{ c.mod.slug }}">
+        <span class="training-num">{{ '%02d' % loop.index }}</span>
+        <div class="training-icon"><i class="bi {{ c.meta.icon }}"></i></div>
+        <h3>{{ c.mod.title }}</h3>
+        <p>{{ c.meta.summary }}</p>
+        <div class="training-meta">
+            <span class="level level-{{ c.meta.level }}">{{ c.meta.level }}</span>
+            <span class="muted"><i class="bi bi-clock"></i> {{ c.meta.minutes }} min</span>
+            <span class="muted"><i class="bi bi-patch-question"></i> {{ c.mod.questions|length }} questions</span>
+        </div>
+        <div class="flex" style="justify-content:space-between">
+            <span class="training-go">Start <i class="bi bi-arrow-right"></i></span>
+            <span class="done-badge"><i class="bi bi-check-circle-fill"></i> <span class="done-score"></span></span>
+        </div>
     </a>
     {% endfor %}
 </div>
 {% else %}
 <div class="empty-state">
-    <i class="bi bi-mortarboard empty-icon"></i>
-    <h2>Təlim modulu yoxdur</h2>
-    <p class="muted">Modul əlavə etmək üçün: <code>flask seed-training</code></p>
+    <span class="empty-icon"><i class="bi bi-mortarboard"></i></span>
+    <h2>No training modules</h2>
+    <p class="muted">Add modules with: <code>flask seed-training</code></p>
 </div>
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Mark modules completed in this browser (stored by the quiz page).
+  (function () {
+    let done = {};
+    try { done = JSON.parse(localStorage.getItem('pg-training') || '{}'); } catch (e) {}
+    const cards = document.querySelectorAll('.training-card[data-slug]');
+    let n = 0;
+    cards.forEach(c => {
+      const r = done[c.dataset.slug];
+      if (r) { c.classList.add('is-done'); c.querySelector('.done-score').textContent = r; n++; }
+    });
+    const label = document.getElementById('progressLabel');
+    if (label) {
+      label.textContent = n + ' / ' + cards.length;
+      document.getElementById('progressBar').style.width = (cards.length ? n / cards.length * 100 : 0) + '%';
+    }
+  })();
+</script>
 {% endblock %}

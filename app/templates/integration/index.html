@@ -1,84 +1,86 @@
 {% extends "base.html" %}
-{% block title %}İnteqrasiya · PhishGuard{% endblock %}
-{% block page_title %}İnteqrasiya statusu{% endblock %}
+{% block title %}Integrations · PhishGuard{% endblock %}
+{% block page_title %}Integrations{% endblock %}
+{% block page_sub %}Connection status for GoPhish and the Mailtrap sandbox.{% endblock %}
 
 {% block content %}
-<div class="stat-grid">
+<div class="row-split" style="grid-template-columns:1fr 1fr">
     <section class="panel">
-        <div class="panel-head toolbar">
+        <div class="panel-head">
             <h2><i class="bi bi-hdd-network"></i> GoPhish</h2>
             <span class="badge-mode {{ 'live' if gophish.reachable else 'demo' }}">
                 {{ 'Live' if gophish.reachable else 'Demo' }}
             </span>
         </div>
-        <p class="muted">{{ gophish.message }}</p>
+        <p class="muted" style="margin-top:0">{{ gophish.message }}</p>
         <table class="kv">
-            <tr><td>Konfiqurasiya</td><td>{{ 'Var' if gophish_configured else 'Yoxdur (.env)' }}</td></tr>
-            <tr><td>Rejim</td><td>{{ gophish.mode }}</td></tr>
-            <tr><td>Əlçatan</td><td>{{ 'Bəli' if gophish.reachable else 'Xeyr' }}</td></tr>
+            <tr><td>Configuration</td><td>{{ 'Present' if gophish_configured else 'Missing (.env)' }}</td></tr>
+            <tr><td>Mode</td><td>{{ gophish.mode }}</td></tr>
+            <tr><td>Reachable</td><td>{{ 'Yes' if gophish.reachable else 'No' }}</td></tr>
         </table>
-        <p class="muted" style="font-size:.8rem">
-            API açarı yalnız <code>.env</code> faylında saxlanılır, frontend-ə heç vaxt
-            ötürülmür. GoPhish olmayanda platforma demo mode-da işləyir.
+        <p class="muted" style="font-size:.78rem;margin:1rem 0 0">
+            The API key is stored only in the <code>.env</code> file and is never sent to the
+            browser. Without GoPhish the platform runs in demo mode.
         </p>
     </section>
 
     <section class="panel">
-        <div class="panel-head toolbar">
+        <div class="panel-head">
             <h2><i class="bi bi-envelope-at"></i> Mailtrap</h2>
             <span class="badge-mode {{ 'live' if mailtrap_ok else 'demo' }}">
-                {{ 'Konfiqurasiya olunub' if mailtrap_ok else 'Yoxdur' }}
+                {{ 'Configured' if mailtrap_ok else 'Not set' }}
             </span>
         </div>
-        <p class="muted">
-            {% if mailtrap_ok %}Test emailləri Mailtrap sandbox-a göndərilə bilər.
-            {% else %}Test email göndərmək üçün <code>.env</code> faylında Mailtrap
-            məlumatlarını təyin edin.{% endif %}
+        <p class="muted" style="margin-top:0">
+            {% if mailtrap_ok %}Test emails can be sent to the Mailtrap sandbox.
+            {% else %}Set your Mailtrap credentials in the <code>.env</code> file to send test emails.{% endif %}
         </p>
     </section>
 </div>
 
 {% if gophish.mode == "live" and gophish.reachable %}
 <section class="panel">
-    <div class="panel-head"><h2>GoPhish kampaniyalarını import et</h2>
-        <span class="muted">Real nəticələri daxili bazaya çək</span></div>
+    <div class="panel-head"><div><h2><i class="bi bi-cloud-download"></i> Import GoPhish campaigns</h2>
+        <span class="muted">Pull real results into the PhishGuard database</span></div></div>
     {% if fetch_error %}
-        <div class="alert alert-danger">GoPhish siyahısı alınmadı: {{ fetch_error }}</div>
+        <div class="alert alert-danger">Could not load the GoPhish campaign list: {{ fetch_error }}</div>
     {% elif gophish_campaigns %}
+    <div class="table-wrap">
     <table class="table-clean">
-        <thead><tr><th>ID</th><th>Ad</th><th>Status</th><th></th></tr></thead>
+        <thead><tr><th>ID</th><th>Name</th><th>Status</th><th></th></tr></thead>
         <tbody>
         {% for c in gophish_campaigns %}
             <tr>
-                <td class="muted">{{ c.id }}</td>
-                <td>{{ c.name }}</td>
-                <td class="muted">{{ c.status }}</td>
+                <td class="muted num">#{{ c.id }}</td>
+                <td class="cell-title">{{ c.name }}</td>
+                <td><span class="tag">{{ c.status }}</span></td>
                 <td class="row-actions">
-                    <form method="post" action="{{ url_for('integration.import_campaign', gophish_id=c.id) }}" style="display:inline">
+                    <form method="post" action="{{ url_for('integration.import_campaign', gophish_id=c.id) }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button class="btn btn-outline btn-sm"><i class="bi bi-download"></i> Import et</button>
+                        <button class="btn btn-outline btn-sm"><i class="bi bi-download"></i> Import</button>
                     </form>
                 </td>
             </tr>
         {% endfor %}
         </tbody>
     </table>
-    <p class="muted" style="font-size:.8rem">Import iştirakçıları və hadisələri
-        (sent/opened/clicked/submitted/reported) GoPhish-dən çəkir. Təkrar import
-        dublikat yaratmır — mövcud datanı yeniləyir.</p>
+    </div>
+    <p class="muted" style="font-size:.78rem;margin:1rem 0 0">Import pulls participants and events
+        (sent / opened / clicked / submitted / reported) from GoPhish. Importing again never creates
+        duplicates — it updates the existing data.</p>
     {% else %}
-    <p class="muted">GoPhish-də hələ kampaniya yoxdur.</p>
+    <p class="muted">There are no campaigns in GoPhish yet.</p>
     {% endif %}
 </section>
 {% endif %}
 
 <section class="panel">
-    <div class="panel-head"><h2>Rejimlər necə işləyir</h2></div>
+    <div class="panel-head"><h2><i class="bi bi-toggles"></i> How the modes work</h2></div>
     <ul class="info-list">
-        <li><strong>Demo rejim</strong> — real email göndərilmir; nəticələr sintetik
-            funnel kimi yaradılır. Public demo həmişə bu rejimdədir.</li>
-        <li><strong>Live rejim</strong> — <code>DEMO_MODE=false</code> və GoPhish
-            konfiqurasiyası olduqda aktivləşir; nəticələr GoPhish API-dən sinxronlaşdırılır.</li>
+        <li><strong>Demo mode</strong> — no real email is sent; results are generated as a synthetic
+            funnel. The public demo always runs in this mode.</li>
+        <li><strong>Live mode</strong> — enabled when <code>DEMO_MODE=false</code> and GoPhish is
+            configured; results are synced from the GoPhish API.</li>
     </ul>
 </section>
 {% endblock %}

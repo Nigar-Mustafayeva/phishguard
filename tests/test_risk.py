@@ -75,7 +75,7 @@ def test_risk_pages_load(auth_client, app):
     assert auth_client.get("/risk/").status_code == 200
     resp = auth_client.get(f"/risk/{pid}")
     assert resp.status_code == 200
-    assert "izah".encode() in resp.data.lower() or b"Risk" in resp.data
+    assert b"explanation" in resp.data.lower()
 
 
 def test_org_summary_counts(app):

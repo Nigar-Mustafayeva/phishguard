@@ -8,8 +8,14 @@ def test_health_ok(client):
     assert resp.get_json() == {"status": "ok"}
 
 
-def test_protected_page_redirects_to_login(client):
+def test_landing_page_is_public(client):
     resp = client.get("/")
+    assert resp.status_code == 200
+    assert b"PhishGuard" in resp.data
+
+
+def test_protected_page_redirects_to_login(client):
+    resp = client.get("/dashboard")
     assert resp.status_code == 302
     assert "/auth/login" in resp.headers["Location"]
 
@@ -22,18 +28,18 @@ def test_bad_credentials_rejected(client):
     resp = client.post("/auth/login",
                        data={"email": "admin@example.com", "password": "wrong"})
     assert resp.status_code == 200
-    assert "yanlış".encode() in resp.data
+    assert b"Invalid email or password" in resp.data
 
 
 def test_dashboard_loads_when_logged_in(auth_client):
-    resp = auth_client.get("/")
+    resp = auth_client.get("/dashboard")
     assert resp.status_code == 200
     assert b"Dashboard" in resp.data
 
 
 def test_logout(auth_client):
     assert auth_client.get("/auth/logout").status_code == 302
-    assert auth_client.get("/").status_code == 302
+    assert auth_client.get("/dashboard").status_code == 302
 
 
 def test_unknown_page_404(auth_client):
@@ -50,8 +56,8 @@ def test_inactive_user_cannot_login(app):
     c = app.test_client()
     resp = c.post("/auth/login",
                   data={"email": "off@example.com", "password": "Test1234!"})
-    assert "yanlış".encode() in resp.data            # login refused
-    assert c.get("/").status_code == 302             # not authenticated
+    assert b"Invalid email or password" in resp.data  # login refused
+    assert c.get("/dashboard").status_code == 302             # not authenticated
 
 
 def test_password_is_hashed(app):

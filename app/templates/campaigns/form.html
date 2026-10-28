@@ -1,19 +1,21 @@
 {% extends "base.html" %}
 {% block title %}{{ title }} · PhishGuard{% endblock %}
 {% block page_title %}{{ title }}{% endblock %}
+{% block page_sub %}Campaigns are saved as drafts until you launch them.{% endblock %}
 
 {% block content %}
+<a href="{{ url_for('campaigns.index') }}" class="back-link"><i class="bi bi-arrow-left"></i> Campaigns</a>
 <section class="panel panel-narrow">
     <form method="post" novalidate>
         {{ form.hidden_tag() }}
         <div class="form-group">
             {{ form.name.label(class="form-label") }}
-            {{ form.name(class="form-control") }}
+            {{ form.name(class="form-control", placeholder="e.g. Q3 password reset test") }}
             {% for e in form.name.errors %}<small class="field-error">{{ e }}</small>{% endfor %}
         </div>
         <div class="form-group">
             {{ form.description.label(class="form-label") }}
-            {{ form.description(class="form-control", rows="3") }}
+            {{ form.description(class="form-control", rows="3", placeholder="Optional notes about the goal of this campaign") }}
         </div>
         <div class="form-group">
             {{ form.template_id.label(class="form-label") }}
@@ -23,10 +25,10 @@
         <div class="form-group">
             {{ form.participant_ids.label(class="form-label") }}
             {{ form.participant_ids(class="form-control", size="8") }}
-            <small class="muted">Ctrl (və ya Cmd) ilə çox seçim edin.</small>
+            <small class="form-hint">Hold Ctrl (or Cmd) to select several participants.</small>
         </div>
         <div class="form-actions">
-            <a href="{{ url_for('campaigns.index') }}" class="btn btn-outline">Ləğv et</a>
+            <a href="{{ url_for('campaigns.index') }}" class="btn btn-outline">Cancel</a>
             {{ form.submit(class="btn btn-primary") }}
         </div>
     </form>

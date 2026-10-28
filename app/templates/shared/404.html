@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}Tapılmadı · PhishGuard{% endblock %}
+{% block title %}Not found · PhishGuard{% endblock %}
 {% block page_title %}404{% endblock %}
 
 {% block content %}
 <div class="empty-state">
-    <i class="bi bi-question-circle empty-icon"></i>
-    <h2>Səhifə tapılmadı</h2>
-    <p class="muted">Axtardığın səhifə mövcud deyil.</p>
-    <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary">Dashboard-a qayıt</a>
+    <span class="empty-icon"><i class="bi bi-question-circle"></i></span>
+    <h2>Page not found</h2>
+    <p class="muted">The page you are looking for does not exist.</p>
+    <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary">Back to dashboard</a>
 </div>
 {% endblock %}

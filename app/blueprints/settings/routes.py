@@ -25,7 +25,7 @@ def index():
     if form.validate_on_submit():
         email = form.email.data.lower().strip()
         if User.query.filter_by(email=email).first():
-            flash("Bu email ilə istifadəçi artıq mövcuddur.", "danger")
+            flash("A user with this email already exists.", "danger")
         else:
             u = User(name=form.name.data.strip(), email=email, role=form.role.data)
             u.set_password(form.password.data)
@@ -33,7 +33,7 @@ def index():
             db.session.add(AuditLog(user_id=current_user.id, action="user_create",
                                     detail=email, ip_address=request.remote_addr))
             db.session.commit()
-            flash("İstifadəçi yaradıldı.", "success")
+            flash("User created.", "success")
             return redirect(url_for("settings.index"))
 
     users = User.query.order_by(User.id).all()
@@ -53,14 +53,14 @@ def index():
 def toggle_user(uid):
     u = db.session.get(User, uid) or abort(404)
     if u.id == current_user.id:
-        flash("Öz hesabınızı deaktiv edə bilməzsiniz.", "danger")
+        flash("You cannot deactivate your own account.", "danger")
         return redirect(url_for("settings.index"))
     u.active = not u.active
     db.session.add(AuditLog(user_id=current_user.id, action="user_toggle",
                             detail=f"{u.email} -> {'aktiv' if u.active else 'deaktiv'}",
                             ip_address=request.remote_addr))
     db.session.commit()
-    flash("İstifadəçi statusu yeniləndi.", "success")
+    flash("User status updated.", "success")
     return redirect(url_for("settings.index"))
 
 

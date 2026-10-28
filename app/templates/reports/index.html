@@ -1,49 +1,52 @@
 {% extends "base.html" %}
-{% block title %}Hesabatlar · PhishGuard{% endblock %}
-{% block page_title %}Hesabatlar{% endblock %}
+{% import "_macros.html" as ui %}
+{% block title %}Reports · PhishGuard{% endblock %}
+{% block page_title %}Reports{% endblock %}
+{% block page_sub %}Download campaign reports as PDF or CSV.{% endblock %}
 
 {% block content %}
 <section class="panel">
-    <div class="panel-head"><h2>Kampaniya hesabatları</h2>
-        <span class="muted">PDF və ya CSV kimi yüklə</span></div>
+    <div class="panel-head"><div><h2><i class="bi bi-file-earmark-bar-graph"></i> Campaign reports</h2>
+        <span class="muted">Generated on demand from stored data</span></div></div>
     {% if rows %}
+    <div class="table-wrap">
     <table class="table-clean">
         <thead><tr>
-            <th>Kampaniya</th><th>Status</th><th>Göndərildi</th><th>Klik %</th>
-            <th>Report %</th><th>Növ</th><th>Yüklə</th>
+            <th>Campaign</th><th>Status</th><th class="num">Sent</th><th>Click rate</th>
+            <th>Report rate</th><th>Type</th><th style="text-align:right">Download</th>
         </tr></thead>
         <tbody>
         {% for c, m in rows %}
             <tr>
-                <td>{{ c.name }}</td>
-                <td class="muted">{{ c.status }}</td>
-                <td>{{ m.sent }}</td>
-                <td>{{ m.click_rate }}%</td>
-                <td>{{ m.report_rate }}%</td>
-                <td>{% if c.is_demo %}<span class="status status-qaralama">demo</span>
-                    {% else %}<span class="status status-aktiv">real</span>{% endif %}</td>
+                <td><span class="cell-title cell-link" title="{{ c.name }}">{{ c.name }}</span></td>
+                <td>{{ ui.status_badge(c.status) }}</td>
+                <td class="num">{{ m.sent }}</td>
+                <td class="num">{{ m.click_rate }}%</td>
+                <td class="num">{{ m.report_rate }}%</td>
+                <td>{{ ui.origin_tag(c.is_demo) }}</td>
                 <td class="row-actions">
                     <a href="{{ url_for('reports.pdf_report', cid=c.id) }}" class="btn btn-outline btn-sm">
-                        <i class="bi bi-file-earmark-pdf"></i> PDF</a>
+                        <i class="bi bi-file-earmark-pdf text-red"></i> PDF</a>
                     <a href="{{ url_for('reports.csv_report', cid=c.id) }}" class="btn btn-outline btn-sm">
-                        <i class="bi bi-filetype-csv"></i> CSV</a>
+                        <i class="bi bi-filetype-csv text-green"></i> CSV</a>
                 </td>
             </tr>
         {% endfor %}
         </tbody>
     </table>
+    </div>
     {% else %}
-    <p class="muted">Hesabat üçün kampaniya yoxdur.</p>
+    <p class="muted">There are no campaigns to report on yet.</p>
     {% endif %}
 </section>
 
 <section class="panel">
-    <div class="panel-head"><h2>Hesabatda nə var?</h2></div>
+    <div class="panel-head"><h2><i class="bi bi-list-check"></i> What is in a report?</h2></div>
     <ul class="info-list">
-        <li>Kampaniya xülasəsi və iştirakçı sayı</li>
-        <li>Hadisə sayları və hesablanmış metrikalar (klik/report/form faizi)</li>
-        <li>Əsas müşahidələr və tövsiyə olunan təlim modulları</li>
-        <li>Yaradılma tarixi və demo data işarəsi</li>
+        <li>Campaign summary and number of targeted participants</li>
+        <li>Event counts and calculated metrics (click / report / form submission rates)</li>
+        <li>Key observations and recommended training modules</li>
+        <li>Generation date and a clear label for demo data</li>
     </ul>
 </section>
 {% endblock %}

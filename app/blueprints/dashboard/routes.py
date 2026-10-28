@@ -9,11 +9,12 @@ from flask_login import login_required
 from app.models import (Campaign, Participant, STATUS_DRAFT)
 from app.services.metrics import (overall_metrics, campaign_metrics,
                                   department_breakdown)
+from app.services.risk_service import all_risk_profiles, org_summary
 
 dashboard_bp = Blueprint("dashboard", __name__)
 
 
-@dashboard_bp.route("/")
+@dashboard_bp.route("/dashboard")
 @login_required
 def index():
     totals = overall_metrics()
@@ -36,8 +37,11 @@ def index():
     recent = []
     for c in Campaign.query.order_by(Campaign.id.desc()).limit(5).all():
         m = campaign_metrics(c)
-        recent.append({"name": c.name, "status": c.status,
-                       "sent": m["sent"], "clicks": m["clicked"]})
+        recent.append({"id": c.id, "name": c.name, "status": c.status,
+                       "sent": m["sent"], "clicks": m["clicked"],
+                       "click_rate": m["click_rate"]})
+
+    risk = org_summary(all_risk_profiles())
 
     return render_template("dashboard/index.html", stats=totals, chart=chart,
-                          departments=departments, recent=recent)
+                          departments=departments, recent=recent, risk=risk)

@@ -25,21 +25,21 @@ from app.services.metrics import campaign_metrics
 
 # Which training module best addresses each phishing category.
 CATEGORY_TO_TRAINING = {
-    "credential": ("links-and-passwords", "Şübhəli linklər, parol və MFA"),
-    "update": ("phishing-basics", "Phishing əlamətlərini tanımaq"),
-    "hr": ("sender-verification", "Göndərən ünvanını yoxlamaq"),
-    "delivery": ("sender-verification", "Göndərən ünvanını yoxlamaq"),
+    "credential": ("links-and-passwords", "Suspicious links, passwords & MFA"),
+    "update": ("phishing-basics", "Recognising phishing red flags"),
+    "hr": ("sender-verification", "Verifying the sender"),
+    "delivery": ("sender-verification", "Verifying the sender"),
 }
-DEFAULT_TRAINING = ("phishing-basics", "Phishing əlamətlərini tanımaq")
-PASSWORD_TRAINING = ("links-and-passwords", "Şübhəli linklər, parol və MFA")
+DEFAULT_TRAINING = ("phishing-basics", "Recognising phishing red flags")
+PASSWORD_TRAINING = ("links-and-passwords", "Suspicious links, passwords & MFA")
 
 
 def _level(score: int):
     if score >= 60:
-        return "high", "Yüksək"
+        return "high", "High"
     if score >= 30:
-        return "medium", "Orta"
-    return "low", "Aşağı"
+        return "medium", "Medium"
+    return "low", "Low"
 
 
 def participant_risk(participant) -> dict:
@@ -53,7 +53,7 @@ def participant_risk(participant) -> dict:
     if n == 0:
         return {"participant": participant, "has_data": False, "score": 0,
                 "level": "none", "level_label": "—",
-                "factors": ["Hələ kampaniya datası yoxdur."],
+                "factors": ["No campaign data yet."],
                 "rec_slug": None, "rec_title": None,
                 "stats": {"sent": 0, "clicked": 0, "submitted": 0,
                           "reported": 0, "opened": 0}}
@@ -73,20 +73,20 @@ def participant_risk(participant) -> dict:
     level, level_label = _level(score)
 
     # Explanations
-    factors = [f"{n} kampaniyada hədəf oldu."]
+    factors = [f"Targeted in {n} campaign(s)."]
     if clicked:
-        factors.append(f"{clicked}/{n} kampaniyada linkə kliklədi.")
+        factors.append(f"Clicked the link in {clicked}/{n} campaign(s).")
     if clicked > 1:
-        factors.append("Təkrar klik — eyni səhvi bir neçə dəfə etdi.")
+        factors.append("Repeat clicker — made the same mistake more than once.")
     if submitted:
-        factors.append(f"{submitted} dəfə təlim formasına məlumat daxil etdi "
-                       "(real parol saxlanmadı).")
+        factors.append(f"Entered data into the training form {submitted} time(s) "
+                       "(no real password was stored).")
     if reported:
-        factors.append(f"{reported} dəfə şübhəli emaili report etdi (müsbət davranış).")
+        factors.append(f"Reported the suspicious email {reported} time(s) (positive behaviour).")
     if clicked == 0 and opened:
-        factors.append("Emaili açdı, amma linkə klikləmədi.")
+        factors.append("Opened the email but did not click the link.")
     if clicked == 0 and opened == 0:
-        factors.append("Riskli davranış qeydə alınmayıb.")
+        factors.append("No risky behaviour recorded.")
 
     # Adaptive training recommendation
     if submitted > 0:
@@ -100,7 +100,7 @@ def participant_risk(participant) -> dict:
                     rec = CATEGORY_TO_TRAINING.get(c.template.category, DEFAULT_TRAINING)
                     break
     elif reported == 0:
-        rec = ("sender-verification", "Göndərən ünvanını yoxlamaq")
+        rec = ("sender-verification", "Verifying the sender")
     else:
         rec = DEFAULT_TRAINING
 

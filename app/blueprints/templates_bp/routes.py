@@ -40,10 +40,10 @@ def create():
         db.session.add(AuditLog(user_id=current_user.id, action="template_create",
                                 detail=t.name, ip_address=request.remote_addr))
         db.session.commit()
-        flash("Şablon yaradıldı.", "success")
+        flash("Template created.", "success")
         return redirect(url_for("templates_bp.preview", tid=t.id))
     return render_template("templates_bp/form.html", form=form,
-                          title="Yeni şablon", allowed_vars=ALLOWED_VARS)
+                          title="New template", allowed_vars=ALLOWED_VARS)
 
 
 @templates_bp.route("/<int:tid>/edit", methods=["GET", "POST"])
@@ -61,10 +61,10 @@ def edit(tid):
         db.session.add(AuditLog(user_id=current_user.id, action="template_edit",
                                 detail=t.name, ip_address=request.remote_addr))
         db.session.commit()
-        flash("Şablon yeniləndi.", "success")
+        flash("Template updated.", "success")
         return redirect(url_for("templates_bp.preview", tid=t.id))
     return render_template("templates_bp/form.html", form=form,
-                          title="Şablonu redaktə et", allowed_vars=ALLOWED_VARS)
+                          title="Edit template", allowed_vars=ALLOWED_VARS)
 
 
 @templates_bp.route("/<int:tid>/delete", methods=["POST"])
@@ -77,7 +77,7 @@ def delete(tid):
     db.session.add(AuditLog(user_id=current_user.id, action="template_delete",
                             detail=name, ip_address=request.remote_addr))
     db.session.commit()
-    flash("Şablon silindi.", "success")
+    flash("Template deleted.", "success")
     return redirect(url_for("templates_bp.index"))
 
 

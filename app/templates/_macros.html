@@ -1,0 +1,34 @@
+{# Shared UI helpers. Import with: {% import "_macros.html" as ui %} #}
+
+{% macro status_badge(s) -%}
+    {%- if s == "active" %}<span class="status status-active">Active</span>
+    {%- elif s == "completed" %}<span class="status status-completed">Completed</span>
+    {%- elif s == "stopped" %}<span class="status status-stopped">Stopped</span>
+    {%- elif s == "scheduled" %}<span class="status status-warn">Scheduled</span>
+    {%- else %}<span class="status status-draft">Draft</span>{% endif -%}
+{%- endmacro %}
+
+{% macro origin_tag(is_demo) -%}
+    {%- if is_demo %}<span class="tag tag-demo">demo</span>{% else %}<span class="tag tag-real">real</span>{% endif -%}
+{%- endmacro %}
+
+{% macro initials(first, last="") -%}
+    {{- (first[:1] ~ (last[:1] if last else "")) | upper -}}
+{%- endmacro %}
+
+{% macro event_label(t) -%}
+    {%- if t == "sent" %}Sent{% elif t == "delivered" %}Delivered
+    {%- elif t == "opened" %}Opened{% elif t == "clicked" %}Clicked
+    {%- elif t == "submitted" %}Submitted form{% elif t == "reported" %}Reported
+    {%- else %}{{ t }}{% endif -%}
+{%- endmacro %}
+
+{% macro stat(icon, color, value, label, suffix="", meter=None) -%}
+<div class="stat-card">
+    <div class="stat-top"><span class="stat-icon bg-{{ color }}"><i class="bi {{ icon }}"></i></span>{{ label }}</div>
+    <div class="stat-value">{{ value }}{% if suffix %}<small>{{ suffix }}</small>{% endif %}</div>
+    {% if meter is not none %}
+    <div class="stat-meter"><span class="fill-{{ color }}" style="width:{{ [meter, 100] | min }}%"></span></div>
+    {% endif %}
+</div>
+{%- endmacro %}

@@ -69,7 +69,7 @@ def test_csv_report(auth_client, app):
     resp = auth_client.get(f"/reports/{cid}/csv")
     assert resp.status_code == 200
     assert "text/csv" in resp.content_type
-    assert b"Metrika" in resp.data
+    assert b"Metric" in resp.data
 
 
 def test_pdf_report_and_record(auth_client, app):
@@ -89,4 +89,4 @@ def test_observations_recommend_training_on_high_click_rate(app):
         obs = build_observations({"sent": 10, "click_rate": 40.0,
                                   "report_rate": 5.0, "submitted": 2})
         text = " ".join(obs)
-        assert "təlim" in text.lower() or "maarif" in text.lower()
+        assert "training" in text.lower()

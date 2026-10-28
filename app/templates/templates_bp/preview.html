@@ -1,40 +1,38 @@
 {% extends "base.html" %}
-{% block title %}{{ template.name }} · Önizləmə{% endblock %}
-{% block page_title %}Şablon önizləməsi{% endblock %}
+{% block title %}{{ template.name }} · Preview{% endblock %}
+{% block page_title %}{{ template.name }}{% endblock %}
+{% block page_sub %}Template preview with sample participant data{% endblock %}
 
 {% block content %}
 <div class="toolbar">
-    <span class="muted">{{ template.name }}</span>
-    <div class="toolbar-actions">
-        <a href="{{ url_for('templates_bp.index') }}" class="btn btn-outline">Siyahı</a>
-        <a href="{{ url_for('templates_bp.edit', tid=template.id) }}" class="btn btn-primary">
-            <i class="bi bi-pencil"></i> Redaktə
-        </a>
-    </div>
+    <a href="{{ url_for('templates_bp.index') }}" class="back-link"><i class="bi bi-arrow-left"></i> Email templates</a>
+    <a href="{{ url_for('templates_bp.edit', tid=template.id) }}" class="btn btn-primary">
+        <i class="bi bi-pencil"></i> Edit
+    </a>
 </div>
 
 <div class="row-split">
     <section class="panel">
-        <div class="panel-head">
-            <h2>Email önizləmə</h2>
-            <span class="muted">Nümunə iştirakçı datası ilə</span>
+        <div class="panel-head"><div><h2><i class="bi bi-envelope-open"></i> Email preview</h2>
+            <span class="muted">Rendered with sample participant data</span></div></div>
+        <div class="email-client">
+            <div class="email-meta">
+                <div><span>From</span> <b>{{ template.sender_name }}</b> &lt;{{ template.sender_email }}&gt;</div>
+                <div><span>Subject</span> <b>{{ template.subject }}</b></div>
+            </div>
+            <iframe class="email-frame" srcdoc="{{ rendered|e }}" title="Email preview"></iframe>
         </div>
-        <div class="email-meta">
-            <div><span>Göndərən:</span> {{ template.sender_name }} &lt;{{ template.sender_email }}&gt;</div>
-            <div><span>Mövzu:</span> {{ template.subject }}</div>
-        </div>
-        <iframe class="email-frame" srcdoc="{{ rendered|e }}" title="Email önizləmə"></iframe>
     </section>
 
     <section class="panel">
-        <div class="panel-head"><h2>Test email göndər</h2></div>
+        <div class="panel-head"><h2><i class="bi bi-send-check"></i> Send a test email</h2></div>
         {% if mailtrap_ok %}
-        <p class="muted">Email Mailtrap sandbox-a göndəriləcək — real alıcıya çatmır.</p>
+        <p class="muted">The email goes to the Mailtrap sandbox — it never reaches a real inbox.</p>
         {% else %}
-        <div class="demo-banner">
+        <div class="demo-banner" style="margin-bottom:1.1rem">
             <i class="bi bi-info-circle"></i>
-            Mailtrap konfiqurasiya olunmayıb. <code>.env</code> faylında
-            <code>MAILTRAP_USERNAME</code> və <code>MAILTRAP_PASSWORD</code> təyin edin.
+            <span>Mailtrap is not configured. Set <code>MAILTRAP_USERNAME</code> and
+            <code>MAILTRAP_PASSWORD</code> in the <code>.env</code> file.</span>
         </div>
         {% endif %}
         <form method="post">

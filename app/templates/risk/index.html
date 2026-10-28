@@ -1,89 +1,88 @@
 {% extends "base.html" %}
-{% block title %}Risk Intelligence · PhishGuard{% endblock %}
-{% block page_title %}Risk Intelligence{% endblock %}
-
-{% macro risk_badge(level, label) %}
-    <span class="risk-pill risk-{{ level }}">{{ label }}</span>
-{% endmacro %}
+{% import "_macros.html" as ui %}
+{% block title %}Risk intelligence · PhishGuard{% endblock %}
+{% block page_title %}Risk intelligence{% endblock %}
+{% block page_sub %}Explainable human-risk scores built from every campaign.{% endblock %}
 
 {% block content %}
 <!-- Org summary -->
 <div class="stat-grid">
-    <div class="stat-card"><div class="stat-icon bg-navy"><i class="bi bi-people"></i></div>
-        <div><div class="stat-value">{{ summary.count }}</div><div class="stat-label">Profilli iştirakçı</div></div></div>
-    <div class="stat-card"><div class="stat-icon bg-amber"><i class="bi bi-speedometer2"></i></div>
-        <div><div class="stat-value">{{ summary.avg }}</div><div class="stat-label">Orta risk balı</div></div></div>
-    <div class="stat-card"><div class="stat-icon bg-red"><i class="bi bi-exclamation-octagon"></i></div>
-        <div><div class="stat-value">{{ summary.high }}</div><div class="stat-label">Yüksək risk</div></div></div>
-    <div class="stat-card"><div class="stat-icon bg-green"><i class="bi bi-shield-check"></i></div>
-        <div><div class="stat-value">{{ summary.low }}</div><div class="stat-label">Aşağı risk</div></div></div>
+    {{ ui.stat("bi-people", "navy", summary.count, "Profiled participants") }}
+    {{ ui.stat("bi-speedometer2", "amber", summary.avg, "Average risk score", "/100", summary.avg) }}
+    {{ ui.stat("bi-exclamation-octagon", "red", summary.high, "High risk") }}
+    {{ ui.stat("bi-shield-check", "green", summary.low, "Low risk") }}
 </div>
 
 <!-- Training effectiveness trend -->
 {% if effectiveness %}
 <section class="panel">
-    <div class="panel-head"><h2>Təlim effektivliyi (trend)</h2>
-        <span class="muted">İlk vs son kampaniya</span></div>
+    <div class="panel-head"><div><h2><i class="bi bi-graph-down-arrow"></i> Training effectiveness</h2>
+        <span class="muted">First vs latest launched campaign</span></div></div>
     <div class="effect-row">
         <div class="effect-box">
             <span class="muted">{{ effectiveness.first.name }}</span>
             <div class="effect-val">{{ effectiveness.first.click_rate }}%</div>
-            <span class="muted">klik faizi</span>
+            <span class="muted">click rate</span>
         </div>
         <div class="effect-arrow">
             <i class="bi bi-arrow-right"></i>
             <div class="{{ 'delta-good' if effectiveness.click_delta < 0 else 'delta-bad' }}">
-                {{ effectiveness.click_delta }}%
+                {{ '+' if effectiveness.click_delta > 0 }}{{ effectiveness.click_delta }}%
             </div>
         </div>
         <div class="effect-box">
             <span class="muted">{{ effectiveness.last.name }}</span>
             <div class="effect-val">{{ effectiveness.last.click_rate }}%</div>
-            <span class="muted">klik faizi</span>
+            <span class="muted">click rate</span>
         </div>
     </div>
-    <p class="muted" style="font-size:.8rem">Qeyd: bu, nəzarətli əvvəl/sonra təcrübəsi deyil —
-        kampaniyalar arasında trend göstəricisidir.</p>
+    <p class="muted" style="font-size:.78rem;margin:1rem 0 0">Note: this is a trend between campaigns,
+        not a controlled before/after experiment.</p>
 </section>
 {% endif %}
 
 <!-- Risk table -->
 <section class="panel">
-    <div class="panel-head"><h2>İştirakçı risk profilləri</h2>
-        <span class="muted">Yüksək risk yuxarıda · bal 0–100</span></div>
+    <div class="panel-head"><div><h2><i class="bi bi-person-exclamation"></i> Participant risk profiles</h2>
+        <span class="muted">Highest risk first · score 0–100</span></div></div>
     {% if profiles %}
+    <div class="table-wrap">
     <table class="table-clean">
-        <thead><tr><th>İştirakçı</th><th>Şöbə</th><th>Risk balı</th><th>Səviyyə</th>
-            <th>Əsas səbəb</th><th>Tövsiyə</th></tr></thead>
+        <thead><tr><th>Participant</th><th>Department</th><th>Risk score</th><th>Level</th>
+            <th>Main reason</th><th>Recommended training</th></tr></thead>
         <tbody>
         {% for r in profiles %}
+            {% set p = r.participant %}
             <tr>
-                <td><a href="{{ url_for('risk.detail', pid=r.participant.id) }}">{{ r.participant.full_name }}</a></td>
-                <td class="muted">{{ r.participant.department.name if r.participant.department else "—" }}</td>
-                <td>
+                <td><a class="cell-link" href="{{ url_for('risk.detail', pid=p.id) }}">
+                    <span class="avatar" style="width:30px;height:30px;font-size:.72rem">{{ ui.initials(p.first_name, p.last_name) }}</span>
+                    {{ p.full_name }}</a></td>
+                <td class="muted">{{ p.department.name if p.department else "—" }}</td>
+                <td style="white-space:nowrap">
                     <div class="risk-bar"><span style="width:{{ r.score }}%" class="risk-fill-{{ r.level }}"></span></div>
-                    <strong>{{ r.score }}</strong>
+                    <strong class="num">{{ r.score }}</strong>
                 </td>
-                <td>{{ risk_badge(r.level, r.level_label) }}</td>
+                <td><span class="risk-pill risk-{{ r.level }}">{{ r.level_label }}</span></td>
                 <td class="muted">{{ r.factors[1] if r.factors|length > 1 else r.factors[0] }}</td>
-                <td class="muted">{{ r.rec_title }}</td>
+                <td>{% if r.rec_slug %}<a href="{{ url_for('training.module', slug=r.rec_slug) }}" class="cell-link" style="font-weight:500"><i class="bi bi-mortarboard text-cyan"></i> {{ r.rec_title }}</a>{% endif %}</td>
             </tr>
         {% endfor %}
         </tbody>
     </table>
+    </div>
     {% else %}
-    <p class="muted">Hələ risk datası yoxdur. Kampaniya başladıb sinxronlaşdırın.</p>
+    <p class="muted">No risk data yet. Launch a campaign and sync it.</p>
     {% endif %}
 </section>
 
 <section class="panel">
-    <div class="panel-head"><h2>Risk balı necə hesablanır?</h2></div>
+    <div class="panel-head"><h2><i class="bi bi-calculator"></i> How is the risk score calculated?</h2></div>
     <ul class="info-list">
-        <li>Klik nisbəti əsas amildir (hər kliklədiyi kampaniya balı artırır).</li>
-        <li>Təlim formasına məlumat daxil etmək balı daha çox artırır.</li>
-        <li>Təkrar klik (bir neçə kampaniyada) əlavə bal verir.</li>
-        <li>Şübhəli emaili report etmək balı <strong>azaldır</strong> (müsbət davranış).</li>
-        <li>Nəticələr insanı "təhlükəli" damğalamaq üçün yox — hədəfli təlim üçündür.</li>
+        <li>The click ratio is the main factor — every campaign where the person clicked raises the score.</li>
+        <li>Entering data into the training form raises the score further.</li>
+        <li>Repeat clicks across several campaigns add extra points.</li>
+        <li>Reporting the suspicious email <strong>lowers</strong> the score (positive behaviour).</li>
+        <li>Scores exist to target training — not to label people as "dangerous".</li>
     </ul>
 </section>
 {% endblock %}

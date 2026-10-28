@@ -26,7 +26,7 @@ def test_cannot_launch_twice(auth_client, app):
     cid = campaign_id_by_name(app, "C2")
     auth_client.post(f"/campaigns/{cid}/launch", follow_redirects=True)
     resp = auth_client.post(f"/campaigns/{cid}/launch", follow_redirects=True)
-    assert "artıq başladılıb".encode() in resp.data
+    assert b"already been launched" in resp.data
 
 
 def test_launch_requires_participants(auth_client, app):
@@ -34,7 +34,7 @@ def test_launch_requires_participants(auth_client, app):
     create_campaign(auth_client, "C3", tid)
     cid = campaign_id_by_name(app, "C3")
     resp = auth_client.post(f"/campaigns/{cid}/launch", follow_redirects=True)
-    assert "iştirakçı əlavə".encode() in resp.data
+    assert b"Add at least one participant" in resp.data
 
 
 def test_edit_draft_then_cannot_edit_after_launch(auth_client, app):
@@ -51,7 +51,7 @@ def test_edit_draft_then_cannot_edit_after_launch(auth_client, app):
     # launch, then editing is blocked
     auth_client.post(f"/campaigns/{cid}/launch", follow_redirects=True)
     resp = auth_client.get(f"/campaigns/{cid}/edit", follow_redirects=True)
-    assert "yalnız qaralama".encode().lower() in resp.data.lower()
+    assert b"only draft campaigns" in resp.data.lower()
 
 
 def test_stop_active_campaign(auth_client, app):

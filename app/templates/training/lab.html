@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+{% block title %}Phishing lab · PhishGuard{% endblock %}
+{% block page_title %}Phishing inbox lab{% endblock %}
+{% block page_sub %}Triage each email: report it as phishing or mark it as legitimate.{% endblock %}
+
+{% block head %}
+<style>
+  .lab-top{display:flex;align-items:center;gap:1.2rem;flex-wrap:wrap}
+  .lab-score{display:flex;gap:1.4rem;font-size:.8rem;color:var(--muted)}
+  .lab-score strong{display:block;font-size:1.3rem;color:var(--text)}
+  .lab{display:grid;grid-template-columns:320px 1fr;min-height:560px;padding:0;overflow:hidden}
+  .inbox{border-right:1px solid var(--border);background:rgba(7,11,22,.35);overflow-y:auto;max-height:680px}
+  .inbox-head{padding:1rem 1.1rem;border-bottom:1px solid var(--border);font-weight:700;font-size:.9rem;
+    display:flex;align-items:center;gap:.5rem}
+  .mail-item{display:flex;gap:.75rem;padding:.9rem 1.1rem;border-bottom:1px solid var(--border);cursor:pointer;
+    transition:.15s;position:relative;width:100%;background:none;border-left:0;border-right:0;border-top:0;
+    text-align:left;color:inherit;font:inherit}
+  .mail-item:hover{background:rgba(148,163,184,.05)}
+  .mail-item.active{background:rgba(34,211,238,.07)}
+  .mail-item.active::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--cyan)}
+  .mail-item .avatar{width:34px;height:34px;font-size:.8rem}
+  .mail-item .who{font-weight:600;font-size:.86rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mail-item .subj{font-size:.8rem;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mail-item .time{font-size:.7rem;color:var(--muted);margin-left:auto;white-space:nowrap}
+  .mail-item .mi-body{min-width:0;flex:1}
+  .mail-item .verdict-dot{position:absolute;right:1rem;bottom:.85rem;font-size:.9rem}
+  .mail-item.unread .who::after{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;
+    background:var(--cyan);margin-left:.45rem;vertical-align:middle}
+  .reader{display:flex;flex-direction:column;min-width:0}
+  .reader-head{padding:1.3rem 1.5rem 1rem;border-bottom:1px solid var(--border)}
+  .reader-head h3{font-size:1.15rem;margin:0 0 .9rem}
+  .from-row{display:flex;align-items:center;gap:.75rem;font-size:.85rem}
+  .from-row .avatar{width:38px;height:38px}
+  .from-row b{color:var(--text)}
+  .from-row .addr{color:var(--muted)}
+  .reader-body{padding:1.4rem 1.5rem;flex:1;font-size:.92rem;line-height:1.7;color:var(--text-2)}
+  .reader-body p{margin:0 0 .9rem}
+  .mail-link{color:#60a5fa;text-decoration:underline;cursor:pointer}
+  .mail-btn{display:inline-block;background:#2563eb;color:#fff;padding:.55rem 1.1rem;border-radius:8px;
+    font-weight:600;cursor:pointer;text-decoration:none}
+  .qr{width:110px;height:110px;border-radius:8px;background:
+      conic-gradient(from 90deg at 25% 25%,#fff 0 25%,#000 0 50%,#fff 0 75%,#000 0) 0 0/22px 22px,#fff;
+      border:6px solid #fff;outline:1px solid var(--border);margin:.4rem 0 1rem}
+  .clue{border-radius:4px;transition:.25s}
+  .revealed .clue{background:rgba(239,68,68,.16);outline:1px solid rgba(239,68,68,.6);outline-offset:1px;color:#fecaca}
+  .revealed .clue.good{background:rgba(34,197,94,.14);outline-color:rgba(34,197,94,.55);color:#bbf7d0}
+  .clue-n{display:none;font-size:.65rem;font-weight:800;background:var(--red);color:#fff;border-radius:999px;
+    padding:0 .35rem;margin-left:.25rem;vertical-align:super}
+  .revealed .clue-n{display:inline}
+  .revealed .clue.good .clue-n{background:var(--green);color:#03140a}
+  .status-bar{min-height:30px;padding:.4rem 1.5rem;border-top:1px solid var(--border);font-family:var(--mono);
+    font-size:.74rem;color:var(--muted);background:rgba(7,11,22,.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .status-bar b{color:var(--amber);font-weight:600}
+  .decide{display:flex;gap:.7rem;padding:1rem 1.5rem;border-top:1px solid var(--border);flex-wrap:wrap;align-items:center}
+  .btn-phish{background:rgba(239,68,68,.12);color:#fca5a5;border:1px solid rgba(239,68,68,.4)}
+  .btn-phish:hover{background:rgba(239,68,68,.22);color:#fecaca}
+  .btn-legit{background:rgba(34,197,94,.1);color:#86efac;border:1px solid rgba(34,197,94,.4)}
+  .btn-legit:hover{background:rgba(34,197,94,.2);color:#bbf7d0}
+  .verdict{display:none;margin:0 1.5rem 1.4rem;padding:1rem 1.1rem;border-radius:var(--radius-sm);border:1px solid;
+    animation:fadeUp .3s ease}
+  .verdict.show{display:block}
+  .verdict.ok{background:rgba(34,197,94,.07);border-color:rgba(34,197,94,.35)}
+  .verdict.bad{background:rgba(239,68,68,.07);border-color:rgba(239,68,68,.35)}
+  .verdict h4{margin:0 0 .5rem;font-size:.98rem;display:flex;align-items:center;gap:.5rem}
+  .verdict ol{margin:.4rem 0 0;padding-left:1.2rem;font-size:.86rem;color:var(--text-2)}
+  .verdict li{margin:.3rem 0}
+  .lab-done{text-align:center;padding:3rem 1.5rem}
+  .lab-done .score-ring{margin:0 auto 1rem;width:110px;height:110px}
+  .lab-done .score-ring span{width:88px;height:88px;font-size:1.4rem}
+  @media(max-width:900px){
+    .lab{grid-template-columns:1fr}
+    .inbox{max-height:none;border-right:0;border-bottom:1px solid var(--border)}
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="toolbar">
+    <a href="{{ url_for('training.index') }}" class="back-link"><i class="bi bi-arrow-left"></i> Training modules</a>
+    <div class="lab-top">
+        <div class="lab-score">
+            <div><strong id="sCorrect">0</strong>correct</div>
+            <div><strong id="sDone">0/0</strong>triaged</div>
+        </div>
+        <button class="btn btn-outline btn-sm" id="restart"><i class="bi bi-shuffle"></i> Restart</button>
+    </div>
+</div>
+
+<div class="demo-banner">
+    <i class="bi bi-hand-index-thumb"></i>
+    <span>Hover over links to see where they really go (shown in the status bar). All companies and
+        addresses below are fictional.</span>
+</div>
+
+<section class="panel lab" id="lab">
+    <div class="inbox">
+        <div class="inbox-head"><i class="bi bi-inbox text-cyan"></i> Inbox <span class="muted" id="unread"></span></div>
+        <div id="mailList"></div>
+    </div>
+    <div class="reader" id="reader"></div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const EMAILS = [
+  { id: 1, phish: true, name: "Nimbus Drive", from: "no-reply@nimbus-drive-share.co", time: "09:12",
+    subject: "“Q4 Salary Adjustments.xlsx” was shared with you",
+    body: `<p>Hi,</p>
+      <p><span class="clue" data-n="1">HR Director</span> shared a file with you: <b>Q4 Salary Adjustments.xlsx</b></p>
+      <p><span class="clue" data-n="2">This link expires in 24 hours.</span></p>
+      <p><a class="mail-btn clue" data-n="3" data-href="https://nimbusdrive.login-secure.top/auth?doc=88213">Open in Nimbus Drive</a></p>`,
+    clues: ["Curiosity bait — salary data is designed to make you click without thinking; no real name is given.",
+            "Artificial deadline to rush you.",
+            "The button leads to login-secure.top, not the file-sharing service's real domain. The sender domain is a look-alike too."] },
+  { id: 2, phish: false, name: "IT Service Desk", from: "it-servicedesk@company.com", time: "08:40",
+    subject: "Planned maintenance: Saturday 22:00–23:00",
+    body: `<p>Hello everyone,</p>
+      <p>Email and VPN will be unavailable on <b>Saturday from 22:00 to 23:00</b> while we apply security updates.</p>
+      <p><span class="clue good" data-n="1">No action is needed from you.</span> If you have questions, contact the
+      service desk through <span class="clue good" data-n="2">the usual internal portal</span>.</p>
+      <p>— IT Service Desk</p>`,
+    clues: ["It doesn't ask you to click, log in or share anything.",
+            "It points you to a channel you already know instead of a link. Sender is the official company domain."] },
+  { id: 3, phish: true, name: "Daniel Brooks (CEO)", from: "d.brooks.office@gmail.com", time: "Yesterday",
+    subject: "Quick favour — are you at your desk?",
+    body: `<p>Hi,</p>
+      <p>I'm stuck in back-to-back meetings and need a quick favour. <span class="clue" data-n="1">Please buy 5 gift cards
+      ($100 each) for a client</span> and send me the codes by email.</p>
+      <p><span class="clue" data-n="2">Keep this between us for now</span> — it's a surprise. I'll reimburse you today.</p>
+      <p>Sent from my phone</p>`,
+    clues: ["Gift-card requests from executives are one of the most common CEO-fraud patterns.",
+            "Secrecy and bypassing normal process are major red flags. Also: the CEO uses a personal Gmail address."] },
+  { id: 4, phish: true, name: "SwiftParcel", from: "support@swiftparcel-redelivery.info", time: "Yesterday",
+    subject: "Delivery attempt failed — action required",
+    body: `<p><span class="clue" data-n="1">Dear customer,</span></p>
+      <p>We were unable to deliver your parcel. To schedule a new delivery,
+      <span class="clue" data-n="2">a redelivery fee of $1.99 must be paid within 12 hours</span>.</p>
+      <p><a class="mail-link clue" data-n="3" data-href="http://swiftparcel-redelivery.info/pay?id=XK29">Pay and reschedule delivery</a></p>`,
+    clues: ["Generic greeting — no name, no tracking number.",
+            "Small fee + deadline: the goal is to collect your card details.",
+            "The link goes to an odd .info domain, not a carrier's official site."] },
+  { id: 5, phish: false, name: "People Team", from: "hr@company.com", time: "Mon",
+    subject: "Benefits enrolment opens Monday",
+    body: `<p>Hi all,</p>
+      <p>Annual benefits enrolment opens next Monday and closes in three weeks.</p>
+      <p>You can review your options on the intranet:
+      <a class="mail-link clue good" data-n="1" data-href="https://intranet.company.com/benefits">intranet.company.com/benefits</a>.
+      <span class="clue good" data-n="2">Sign in the usual way — we will never ask for your password by email.</span></p>
+      <p>Thanks, People Team</p>`,
+    clues: ["The link text and the real destination match, and it is the company's own intranet domain.",
+            "Reasonable timeline (three weeks), no pressure, and an explicit reminder about passwords."] },
+  { id: 6, phish: true, name: "Northwind Supplies — Accounts", from: "accounts@northwind-suppl1es.co", time: "Mon",
+    subject: "URGENT: updated bank details for invoice #4471",
+    body: `<p>Dear Finance team,</p>
+      <p>Due to an audit, <span class="clue" data-n="1">our bank details have changed</span>. Please use the account
+      in the attached letter for invoice #4471.</p>
+      <p><span class="clue" data-n="2">Payment must be made today to avoid a late penalty.</span>
+      <span class="clue" data-n="3">Please do not call our office as the lines are being upgraded.</span></p>
+      <p>Kind regards,<br>Accounts Receivable</p>`,
+    clues: ["Bank-detail changes by email are the classic invoice-fraud (BEC) move. Note the “1” instead of “i” in the domain.",
+            "Urgency and a threatened penalty.",
+            "Discouraging a phone call is a giveaway — always verify by phone using a number you already have."] },
+  { id: 7, phish: false, name: "Security Team", from: "security@company.com", time: "Fri",
+    subject: "Monthly security tip: report, don't forward",
+    body: `<p>Hi team,</p>
+      <p>This month's tip: if an email looks suspicious, use the <b>Report phishing</b> button in your mail client.
+      <span class="clue good" data-n="1">Please don't forward it to colleagues</span> — that spreads the risk.</p>
+      <p><span class="clue good" data-n="2">There is nothing to click in this email.</span> Thanks for keeping us safe!</p>`,
+    clues: ["Advice that matches company policy.",
+            "No links, attachments or requests — and the sender is the official domain."] },
+  { id: 8, phish: true, name: "IT Support", from: "it-support@company-mfa.com", time: "Thu",
+    subject: "Action required: re-enrol your MFA device",
+    body: `<p>Hello,</p>
+      <p>Your multi-factor authentication <span class="clue" data-n="1">will be disabled tonight</span> due to a policy update.
+      <span class="clue" data-n="2">Scan the QR code below with your phone</span> to keep access:</p>
+      <div class="qr clue" data-n="3"></div>
+      <p>IT Support Team</p>`,
+    clues: ["Threat of losing access creates pressure.",
+            "QR codes move you to your phone, outside company protections (“quishing”).",
+            "The sender domain company-mfa.com is not the real company.com."] },
+];
+
+const list = document.getElementById('mailList');
+const reader = document.getElementById('reader');
+let order = [], answers = {}, current = null;
+
+const initials = n => n.replace(/\(.*\)/, '').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+const colors = ['#3b82f6', '#14b8a6', '#8b5cf6', '#f59e0b', '#ef4444', '#22c55e', '#0ea5e9', '#ec4899'];
+
+function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+function renderList() {
+  list.innerHTML = '';
+  order.forEach(m => {
+    const a = answers[m.id];
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'mail-item' + (a ? '' : ' unread') + (current && current.id === m.id ? ' active' : '');
+    b.innerHTML = `<span class="avatar" style="background:${colors[m.id % colors.length]};color:#fff">${initials(m.name)}</span>
+      <div class="mi-body"><div class="flex" style="gap:.4rem;flex-wrap:nowrap"><span class="who">${m.name}</span><span class="time">${m.time}</span></div>
+      <div class="subj">${m.subject}</div></div>
+      ${a ? `<i class="verdict-dot bi ${a.correct ? 'bi-check-circle-fill text-green' : 'bi-x-circle-fill text-red'}"></i>` : ''}`;
+    b.addEventListener('click', () => open(m));
+    list.appendChild(b);
+  });
+  const left = order.length - Object.keys(answers).length;
+  document.getElementById('unread').textContent = left ? `· ${left} to triage` : '· all done';
+  const correct = Object.values(answers).filter(a => a.correct).length;
+  document.getElementById('sCorrect').textContent = correct;
+  document.getElementById('sDone').textContent = Object.keys(answers).length + '/' + order.length;
+}
+
+function open(m) {
+  current = m;
+  const a = answers[m.id];
+  reader.innerHTML = `
+    <div class="reader-head">
+      <h3>${m.subject}</h3>
+      <div class="from-row"><span class="avatar" style="background:${colors[m.id % colors.length]};color:#fff">${initials(m.name)}</span>
+        <div><b>${m.name}</b> <span class="addr">&lt;${m.from}&gt;</span><div class="muted" style="font-size:.76rem">to me · ${m.time}</div></div></div>
+    </div>
+    <div class="reader-body ${a ? 'revealed' : ''}" id="mailBody">${m.body}</div>
+    <div class="status-bar" id="statusBar">Hover a link to preview its destination</div>
+    <div class="verdict" id="verdict"></div>
+    <div class="decide" id="decide">
+      <button class="btn btn-phish" data-v="phish"><i class="bi bi-flag-fill"></i> Report phishing</button>
+      <button class="btn btn-legit" data-v="legit"><i class="bi bi-check2-circle"></i> Looks legit</button>
+      <span class="muted" style="margin-left:auto">What would you do?</span>
+    </div>`;
+  // number the clues
+  reader.querySelectorAll('.clue').forEach(c => {
+    const n = document.createElement('span'); n.className = 'clue-n'; n.textContent = c.dataset.n; c.appendChild(n);
+  });
+  // hover-to-preview links
+  const bar = document.getElementById('statusBar');
+  reader.querySelectorAll('[data-href]').forEach(l => {
+    l.addEventListener('mouseenter', () => bar.innerHTML = '<i class="bi bi-link-45deg"></i> <b>' + l.dataset.href + '</b>');
+    l.addEventListener('mouseleave', () => bar.textContent = 'Hover a link to preview its destination');
+    l.addEventListener('click', e => { e.preventDefault(); bar.innerHTML = '<i class="bi bi-shield-exclamation"></i> Blocked in the lab — this would open <b>' + l.dataset.href + '</b>'; });
+  });
+  reader.querySelectorAll('#decide button').forEach(btn => btn.addEventListener('click', () => decide(m, btn.dataset.v === 'phish')));
+  if (a) showVerdict(m);
+  renderList();
+}
+
+function decide(m, saidPhish) {
+  if (answers[m.id]) return;
+  answers[m.id] = { saidPhish, correct: saidPhish === m.phish };
+  document.getElementById('mailBody').classList.add('revealed');
+  showVerdict(m);
+  renderList();
+}
+
+function showVerdict(m) {
+  const a = answers[m.id];
+  const v = document.getElementById('verdict');
+  document.getElementById('decide').style.display = 'none';
+  const head = a.correct
+    ? `<i class="bi bi-check-circle-fill text-green"></i> Correct — this email is ${m.phish ? 'phishing' : 'legitimate'}.`
+    : `<i class="bi bi-x-circle-fill text-red"></i> Not quite — this email is ${m.phish ? 'phishing' : 'legitimate'}.`;
+  const left = order.filter(o => !answers[o.id]);
+  v.className = 'verdict show ' + (a.correct ? 'ok' : 'bad');
+  v.innerHTML = `<h4>${head}</h4>
+    <div class="muted">${m.phish ? 'Red flags spotted in the message:' : 'Why it can be trusted:'}</div>
+    <ol>${m.clues.map(c => `<li>${c}</li>`).join('')}</ol>
+    <div class="flex" style="margin-top:1rem">${left.length
+      ? `<button class="btn btn-primary btn-sm" id="nextMail">Next email <i class="bi bi-arrow-right"></i></button>`
+      : `<button class="btn btn-primary btn-sm" id="finish">See results <i class="bi bi-trophy"></i></button>`}</div>`;
+  const nx = document.getElementById('nextMail');
+  if (nx) nx.addEventListener('click', () => open(left[0]));
+  const fin = document.getElementById('finish');
+  if (fin) fin.addEventListener('click', summary);
+}
+
+function summary() {
+  current = null;
+  renderList();
+  const correct = Object.values(answers).filter(a => a.correct).length;
+  const pct = Math.round(correct / order.length * 100);
+  const missed = order.filter(m => !answers[m.id].correct);
+  const msg = pct === 100 ? 'Perfect score — attackers would have a hard time with you.'
+            : pct >= 75 ? 'Strong instincts. Review the ones you missed.'
+            : 'Good start. Revisit the training modules and try again.';
+  reader.innerHTML = `<div class="lab-done">
+      <div class="score-ring" style="--p:${pct};${pct >= 75 ? '' : '--ring:var(--amber)'}"><span>${pct}%</span></div>
+      <h3 style="margin:0 0 .4rem">${correct} of ${order.length} emails triaged correctly</h3>
+      <p class="muted">${msg}</p>
+      ${missed.length ? `<div style="max-width:440px;margin:1.2rem auto 0;text-align:left">
+        <div class="muted" style="margin-bottom:.5rem">Missed:</div>
+        ${missed.map(m => `<div class="quiz-review wrong" style="cursor:pointer" data-id="${m.id}"><i class="bi bi-x-circle-fill"></i> ${m.subject}</div>`).join('')}
+      </div>` : ''}
+      <div class="flex" style="justify-content:center;margin-top:1.5rem">
+        <button class="btn btn-outline" id="again"><i class="bi bi-shuffle"></i> Play again</button>
+        <a class="btn btn-primary" href="{{ url_for('training.index') }}">Training modules <i class="bi bi-arrow-right"></i></a>
+      </div></div>`;
+  reader.querySelectorAll('[data-id]').forEach(el => el.addEventListener('click', () => open(EMAILS.find(m => m.id == el.dataset.id))));
+  document.getElementById('again').addEventListener('click', start);
+}
+
+function start() {
+  order = shuffle([...EMAILS]);
+  answers = {};
+  open(order[0]);
+}
+document.getElementById('restart').addEventListener('click', start);
+start();
+</script>
+{% endblock %}

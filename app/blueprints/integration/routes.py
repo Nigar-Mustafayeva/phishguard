@@ -49,5 +49,5 @@ def import_campaign(gophish_id):
         db.session.commit()
         flash(message, "success")
     except GoPhishError as exc:
-        flash(f"Import alınmadı: {exc}", "danger")
+        flash(f"Import failed: {exc}", "danger")
     return redirect(url_for("integration.index"))
