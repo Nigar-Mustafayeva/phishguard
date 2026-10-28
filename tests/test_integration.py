@@ -99,3 +99,29 @@ def test_import_gophish_campaign(app, monkeypatch):
         # Re-import must not duplicate participants.
         gophish_service.import_campaign(7)
         assert Participant.query.filter_by(email="ali@corp.example").count() == 1
+
+
+def test_dashboard_shows_only_imported_campaigns(auth_client, app, monkeypatch):
+    # A locally created, launched campaign must NOT appear on the dashboard.
+    tid, pid = seed_template_and_participant(app)
+    create_campaign(auth_client, "Local Campaign", tid, [pid])
+    cid = campaign_id_by_name(app, "Local Campaign")
+    auth_client.post(f"/campaigns/{cid}/launch", follow_redirects=True)
+
+    resp = auth_client.get("/dashboard")
+    assert b"No imported campaigns yet" in resp.data
+    assert b"Local Campaign" not in resp.data
+
+    with app.app_context():
+        from flask import current_app
+        from app.services import gophish_service
+        current_app.config.update(DEMO_MODE=False,
+                                  GOPHISH_API_URL="https://gophish.example",
+                                  GOPHISH_API_KEY="k")
+        monkeypatch.setattr(gophish_service, "fetch_campaign",
+                            lambda gid: SAMPLE_GOPHISH_CAMPAIGN)
+        gophish_service.import_campaign(7)
+
+    resp = auth_client.get("/dashboard")
+    assert b"Q4 Awareness Test" in resp.data
+    assert b"Local Campaign" not in resp.data

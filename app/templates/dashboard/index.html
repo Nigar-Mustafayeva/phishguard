@@ -2,19 +2,28 @@
 {% import "_macros.html" as ui %}
 {% block title %}Dashboard · PhishGuard{% endblock %}
 {% block page_title %}Dashboard{% endblock %}
-{% block page_sub %}Monitor campaigns, human risk and reporting behaviour in real time.{% endblock %}
+{% block page_sub %}Results of the campaigns imported from GoPhish.{% endblock %}
 {% block topbar_actions %}
-<a href="{{ url_for('campaigns.create') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> New campaign</a>
+<a href="{{ url_for('integration.index') }}" class="btn btn-primary btn-sm"><i class="bi bi-cloud-download"></i> Import from GoPhish</a>
 {% endblock %}
 
 {% block content %}
-{% if demo_mode %}
-<div class="demo-banner">
-    <i class="bi bi-info-circle"></i>
-    <span>All figures are calculated from the database. Sample records are included and are
-    labelled <strong>demo</strong> throughout the platform.</span>
+{% if not has_imported %}
+<section class="panel">
+    <div class="empty-state">
+        <span class="empty-icon"><i class="bi bi-cloud-download"></i></span>
+        <h2>No imported campaigns yet</h2>
+        <p class="muted">The dashboard shows only campaigns imported from GoPhish.
+            Import one on the Integrations page to see its results here.</p>
+        <a href="{{ url_for('integration.index') }}" class="btn btn-primary"><i class="bi bi-cloud-download"></i> Go to Integrations</a>
+    </div>
+</section>
+{% else %}
+<div class="alert alert-info">
+    <i class="bi bi-funnel"></i>
+    <span>Showing only campaigns imported from GoPhish. Demo and locally created campaigns are
+    listed on the <a href="{{ url_for('campaigns.index') }}">Campaigns</a> page.</span>
 </div>
-{% endif %}
 
 <!-- Stat cards -->
 <div class="stat-grid">
@@ -82,7 +91,7 @@
     <section class="panel">
         <div class="panel-head">
             <div><h2><i class="bi bi-funnel"></i> Overall funnel</h2>
-                <span class="muted">Across all campaigns</span></div>
+                <span class="muted">Across imported campaigns</span></div>
         </div>
         {% set steps = [("Sent", stats.sent, "blue"), ("Opened", stats.opened, "cyan"),
                         ("Clicked", stats.clicked, "amber"), ("Submitted", stats.submitted, "red"),
@@ -128,6 +137,7 @@
     <small class="muted">* Percentages for departments with a small sample size are not reliable.</small>
     {% else %}<p class="muted">No department data yet.</p>{% endif %}
 </section>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}

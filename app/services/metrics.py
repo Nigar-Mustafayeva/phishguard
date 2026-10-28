@@ -39,9 +39,10 @@ def campaign_metrics(campaign) -> dict:
     }
 
 
-def overall_metrics():
-    """Aggregate across all campaigns, for the dashboard (Stage 9)."""
-    campaigns = Campaign.query.all()
+def overall_metrics(campaigns=None):
+    """Aggregate across campaigns (all by default), for the dashboard."""
+    if campaigns is None:
+        campaigns = Campaign.query.all()
     totals = {"campaigns": len(campaigns), "targeted": 0, "sent": 0,
               "opened": 0, "clicked": 0, "submitted": 0, "reported": 0}
     for c in campaigns:
@@ -61,11 +62,12 @@ def overall_metrics():
     return totals
 
 
-def department_breakdown():
+def department_breakdown(campaign_ids=None):
     """Per-department participant counts and distinct click/report counts.
 
     click_rate here = distinct participants in the department who clicked in any
-    campaign / participants in the department.
+    campaign / participants in the department. When campaign_ids is given, only
+    participants targeted by those campaigns and their events are counted.
     """
     from app.extensions import db
     from app.models import Participant, Department
@@ -74,15 +76,24 @@ def department_breakdown():
             for d in Department.query.all()}
 
     # participant -> department map (only participants with a department)
+    participants = Participant.query.all()
+    if campaign_ids is not None:
+        targeted = {cp.participant_id for cp in CampaignParticipant.query.filter(
+            CampaignParticipant.campaign_id.in_(campaign_ids))}
+        participants = [p for p in participants if p.id in targeted]
+
     pid_to_dept = {}
-    for p in Participant.query.all():
+    for p in participants:
         if p.department_id in rows:
             rows[p.department_id]["participants"] += 1
             pid_to_dept[p.id] = p.department_id
 
     seen = {EVENT_CLICKED: set(), EVENT_REPORTED: set()}
-    for ev in CampaignEvent.query.filter(
-            CampaignEvent.event_type.in_([EVENT_CLICKED, EVENT_REPORTED])).all():
+    events = CampaignEvent.query.filter(
+        CampaignEvent.event_type.in_([EVENT_CLICKED, EVENT_REPORTED]))
+    if campaign_ids is not None:
+        events = events.filter(CampaignEvent.campaign_id.in_(campaign_ids))
+    for ev in events.all():
         dept_id = pid_to_dept.get(ev.participant_id)
         if dept_id is None:
             continue

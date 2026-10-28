@@ -42,10 +42,16 @@ def _level(score: int):
     return "low", "Low"
 
 
-def participant_risk(participant) -> dict:
-    """Return a risk profile dict for one participant."""
+def participant_risk(participant, campaign_ids=None) -> dict:
+    """Return a risk profile dict for one participant.
+
+    When campaign_ids is given, only events from those campaigns are scored.
+    """
     by_campaign = defaultdict(set)
-    for ev in CampaignEvent.query.filter_by(participant_id=participant.id).all():
+    events = CampaignEvent.query.filter_by(participant_id=participant.id)
+    if campaign_ids is not None:
+        events = events.filter(CampaignEvent.campaign_id.in_(campaign_ids))
+    for ev in events.all():
         by_campaign[ev.campaign_id].add(ev.event_type)
 
     sent_campaigns = [cid for cid, s in by_campaign.items() if EVENT_SENT in s]
@@ -111,9 +117,9 @@ def participant_risk(participant) -> dict:
                       "reported": reported, "opened": opened}}
 
 
-def all_risk_profiles() -> list:
+def all_risk_profiles(campaign_ids=None) -> list:
     """Risk profiles for participants with data, highest risk first."""
-    profiles = [participant_risk(p) for p in Participant.query.all()]
+    profiles = [participant_risk(p, campaign_ids) for p in Participant.query.all()]
     profiles = [p for p in profiles if p["has_data"]]
     profiles.sort(key=lambda r: r["score"], reverse=True)
     return profiles
