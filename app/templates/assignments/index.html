@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}Assign training · PhishGuard{% endblock %}
+{% block page_title %}Assign training{% endblock %}
+{% block page_sub %}Let AI match each person's risk profile to the right training, then email it.{% endblock %}
+{% block topbar_actions %}
+<a href="{{ url_for('assignments.effectiveness') }}" class="btn btn-outline btn-sm"><i class="bi bi-graph-up-arrow"></i> Effectiveness</a>
+{% endblock %}
+
+{% macro assign_status(a) -%}
+    {%- if a.status == 'completed' %}<span class="status status-active">Completed</span>
+    {%- elif a.status == 'opened' %}<span class="status status-warn">Opened</span>
+    {%- elif a.status == 'sent' %}<span class="status status-completed">Email sent</span>
+    {%- else %}<span class="status status-draft">Not sent</span>{% endif -%}
+{%- endmacro %}
+
+{% block content %}
+<!-- How it works -->
+<section class="training-hero">
+    <h2><i class="bi bi-stars text-cyan"></i> Adaptive training, powered by AI</h2>
+    <p>PhishGuard sends each participant's behaviour — clicks, form submissions, reports and risk
+        factors — to the AI, which picks the modules that will reduce that person's risk most and
+        explains why. Names and email addresses are never sent to the AI.</p>
+    <div class="hero-stats">
+        <div><strong>1</strong>Select people</div>
+        <div><strong>2</strong>AI recommends</div>
+        <div><strong>3</strong>Review &amp; email</div>
+        <div><strong>4</strong>Measure impact</div>
+    </div>
+    <div class="flex" style="margin-top:1.2rem">
+        <span class="mode-chip {{ 'live' if ai_ready else 'demo' }}"><span class="dot"></span>
+            {{ 'AI connected' if ai_ready else 'AI not configured — rules will be used' }}</span>
+        <span class="mode-chip {{ 'live' if smtp_ready else 'demo' }}"><span class="dot"></span>
+            {{ 'Email sending ready' if smtp_ready else 'SMTP not configured — links shown to copy' }}</span>
+    </div>
+</section>
+
+<!-- Pick participants -->
+<section class="panel">
+    <form method="post" action="{{ url_for('assignments.analyze') }}" id="analyzeForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="panel-head">
+            <div><h2><i class="bi bi-person-exclamation"></i> Who needs training?</h2>
+                <span class="muted">Risk profiles from imported GoPhish campaigns · high and medium risk are pre-selected</span></div>
+            <div class="flex">
+                <button class="btn btn-outline btn-sm" name="mode" value="rules"><i class="bi bi-list-check"></i> Use rules</button>
+                <button class="btn btn-primary" name="mode" value="ai" id="aiBtn"><i class="bi bi-stars"></i> Analyze with AI</button>
+            </div>
+        </div>
+        {% if profiles %}
+        <div class="table-wrap">
+        <table class="table-clean">
+            <thead><tr><th style="width:36px"><input type="checkbox" class="form-check-input" id="checkAll" aria-label="Select all"></th>
+                <th>Participant</th><th>Department</th><th>Risk score</th><th>Level</th><th>Main reason</th></tr></thead>
+            <tbody>
+            {% for r in profiles %}
+                {% set p = r.participant %}
+                <tr>
+                    <td><input type="checkbox" class="form-check-input pick" name="pid" value="{{ p.id }}" {{ 'checked' if r.level in ('high', 'medium') }} aria-label="Select {{ p.full_name }}"></td>
+                    <td><div class="person"><span class="avatar">{{ ui.initials(p.first_name, p.last_name) }}</span>
+                        <div><span class="cell-title">{{ p.full_name }}</span><span class="cell-sub">{{ p.email }}</span></div></div></td>
+                    <td class="muted">{{ p.department.name if p.department else "—" }}</td>
+                    <td style="white-space:nowrap"><div class="risk-bar"><span style="width:{{ r.score }}%" class="risk-fill-{{ r.level }}"></span></div><strong class="num">{{ r.score }}</strong></td>
+                    <td><span class="risk-pill risk-{{ r.level }}">{{ r.level_label }}</span></td>
+                    <td class="muted">{{ r.factors[1] if r.factors|length > 1 else r.factors[0] }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        {% else %}
+        <p class="muted">No risk data yet. Import a GoPhish campaign first.</p>
+        {% endif %}
+    </form>
+</section>
+
+<!-- Assignments -->
+<section class="panel">
+    <div class="panel-head"><div><h2><i class="bi bi-envelope-paper-heart"></i> Assigned training</h2>
+        <span class="muted">Latest {{ assignments|length }} assignments</span></div></div>
+    {% if assignments %}
+    <div class="table-wrap">
+    <table class="table-clean">
+        <thead><tr><th>Participant</th><th>Module</th><th>By</th><th>Status</th><th>Score</th><th style="text-align:right">Actions</th></tr></thead>
+        <tbody>
+        {% for a in assignments %}
+            <tr>
+                <td><span class="cell-title">{{ a.participant.full_name }}</span><span class="cell-sub">{{ a.participant.email }}</span></td>
+                <td><span class="cell-title" style="font-weight:500">{{ a.module.title }}</span>
+                    {% if a.reason %}<span class="cell-sub" style="max-width:360px;white-space:normal">{{ a.reason }}</span>{% endif %}</td>
+                <td>{% if a.source == 'ai' %}<span class="tag tag-demo"><i class="bi bi-stars"></i>&nbsp;AI</span>{% else %}<span class="tag">rules</span>{% endif %}</td>
+                <td>{{ assign_status(a) }}
+                    {% if a.email_error and not a.sent_at %}<span class="cell-sub text-amber" title="{{ a.email_error }}">email not sent</span>{% endif %}</td>
+                <td class="num">{% if a.total %}<strong>{{ a.score }}/{{ a.total }}</strong>{% else %}<span class="muted">—</span>{% endif %}</td>
+                <td class="row-actions">
+                    <button type="button" class="icon-link copy-link" data-link="{{ link(a) }}" title="Copy training link"><i class="bi bi-link-45deg"></i></button>
+                    {% if a.status != 'completed' %}
+                    <form method="post" action="{{ url_for('assignments.resend', aid=a.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="icon-link" title="{{ 'Resend email' if a.sent_at else 'Send email' }}"><i class="bi bi-send"></i></button>
+                    </form>
+                    {% endif %}
+                    <form method="post" action="{{ url_for('assignments.delete', aid=a.id) }}" onsubmit="return confirm('Remove this assignment?');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="icon-link danger" title="Remove"><i class="bi bi-trash"></i></button>
+                    </form>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p class="muted">Nothing assigned yet. Select participants above and analyze them.</p>
+    {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const all = document.getElementById('checkAll');
+  if (all) all.addEventListener('change', () => document.querySelectorAll('.pick').forEach(c => c.checked = all.checked));
+  const form = document.getElementById('analyzeForm');
+  form.addEventListener('submit', e => {
+    const btn = e.submitter;
+    if (btn && btn.value === 'ai') {
+      // Keep the clicked button's value: a disabled submitter is not sent.
+      const h = document.createElement('input'); h.type = 'hidden'; h.name = 'mode'; h.value = 'ai'; form.appendChild(h);
+      btn.disabled = true;
+      btn.innerHTML = '<i class="bi bi-hourglass-split"></i> AI is analyzing…';
+    }
+  });
+  document.querySelectorAll('.copy-link').forEach(b => b.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(b.dataset.link); b.innerHTML = '<i class="bi bi-check2 text-green"></i>'; }
+    catch (e) { prompt('Copy the training link:', b.dataset.link); }
+  }));
+</script>
+{% endblock %}

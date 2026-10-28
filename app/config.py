@@ -51,6 +51,24 @@ class Config:
     MAILTRAP_USERNAME = os.environ.get("MAILTRAP_USERNAME", "")
     MAILTRAP_PASSWORD = os.environ.get("MAILTRAP_PASSWORD", "")
 
+    # Real SMTP for training invitations (e.g. a Gmail app password or the
+    # same server GoPhish uses). Without it, invitation links are shown in the
+    # UI to copy instead of being emailed.
+    SMTP_HOST = os.environ.get("SMTP_HOST", "")
+    SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
+    SMTP_USERNAME = os.environ.get("SMTP_USERNAME", "")
+    SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
+    SMTP_FROM = os.environ.get("SMTP_FROM", "")          # e.g. "Security Team <security@company.com>"
+    SMTP_USE_TLS = os.environ.get("SMTP_USE_TLS", "true").lower() == "true"
+
+    # Public address used in emailed training links (e.g. https://phishguard.onrender.com).
+    PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "")
+
+    # AI training recommendations (Claude). Without a key, a transparent
+    # rule-based recommendation is used instead.
+    ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+    AI_MODEL = os.environ.get("AI_MODEL", "claude-opus-5-5")
+
 
 class DevelopmentConfig(Config):
     DEBUG = True

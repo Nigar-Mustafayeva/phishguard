@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}Training effectiveness · PhishGuard{% endblock %}
+{% block page_title %}Training effectiveness{% endblock %}
+{% block page_sub %}Did the assigned training change behaviour?{% endblock %}
+{% block topbar_actions %}
+<a href="{{ url_for('assignments.index') }}" class="btn btn-primary btn-sm"><i class="bi bi-stars"></i> Assign training</a>
+{% endblock %}
+
+{% block content %}
+{% set f = data.funnel %}{% set t = data.trend %}
+{% if not f.assigned %}
+<section class="panel">
+    <div class="empty-state">
+        <span class="empty-icon"><i class="bi bi-graph-up-arrow"></i></span>
+        <h2>No training assigned yet</h2>
+        <p class="muted">Assign training from participants' risk profiles, then come back to see completion,
+            quiz scores and how click rates change in later campaigns.</p>
+        <a href="{{ url_for('assignments.index') }}" class="btn btn-primary"><i class="bi bi-stars"></i> Assign training</a>
+    </div>
+</section>
+{% else %}
+
+<div class="stat-grid">
+    {{ ui.stat("bi-journal-check", "blue", f.assigned, "Assigned") }}
+    {{ ui.stat("bi-envelope-check", "navy", f.sent, "Invitations emailed") }}
+    {{ ui.stat("bi-box-arrow-in-right", "teal", f.opened, "Opened the training") }}
+    {{ ui.stat("bi-check2-circle", "green", f.completion_rate, "Completion rate", "%", f.completion_rate) }}
+    {{ ui.stat("bi-mortarboard", "amber", f.avg_score if f.avg_score is not none else "—", "Average quiz score", "%" if f.avg_score is not none else "", f.avg_score or 0) }}
+    {{ ui.stat("bi-stars", "cyan", f.ai_share, "Recommended by AI", "%", f.ai_share) }}
+</div>
+
+<div class="row-split" style="grid-template-columns:1fr 1.2fr">
+    <section class="panel">
+        <div class="panel-head"><div><h2><i class="bi bi-funnel"></i> Training funnel</h2>
+            <span class="muted">From assignment to completion</span></div></div>
+        {% set steps = [("Assigned", f.assigned, "blue"), ("Emailed", f.sent, "cyan"),
+                        ("Opened", f.opened, "amber"), ("Completed", f.completed, "green")] %}
+        <div style="display:grid;gap:.9rem">
+        {% for label, value, color in steps %}
+            {% set pct = (100 * value / f.assigned) | round(1) %}
+            <div>
+                <div class="flex" style="justify-content:space-between;font-size:.84rem;margin-bottom:.35rem">
+                    <span style="color:var(--text-2)">{{ label }}</span>
+                    <span><strong>{{ value }}</strong> <span class="muted">· {{ pct }}%</span></span>
+                </div>
+                <div class="stat-meter" style="height:8px"><span class="fill-{{ color }}" style="width:{{ pct }}%"></span></div>
+            </div>
+        {% endfor %}
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="panel-head"><div><h2><i class="bi bi-graph-down-arrow"></i> Behaviour before vs after training</h2>
+            <span class="muted">{{ t.trained }} trained participants · campaigns launched before vs after they completed training</span></div></div>
+        <div class="effect-row" style="justify-content:space-around">
+            <div class="effect-box">
+                <span class="muted">Click rate before</span>
+                <div class="effect-val">{{ t.click_before if t.click_before is not none else "—" }}{{ "%" if t.click_before is not none }}</div>
+            </div>
+            <div class="effect-arrow">
+                <i class="bi bi-arrow-right"></i>
+                {% if t.click_delta is not none %}
+                <div class="{{ 'delta-good' if t.click_delta <= 0 else 'delta-bad' }}">{{ '+' if t.click_delta > 0 }}{{ t.click_delta }}%</div>
+                {% endif %}
+            </div>
+            <div class="effect-box">
+                <span class="muted">Click rate after</span>
+                <div class="effect-val {{ 'text-green' if t.click_delta is not none and t.click_delta <= 0 }}">{{ t.click_after if t.click_after is not none else "—" }}{{ "%" if t.click_after is not none }}</div>
+            </div>
+        </div>
+        <table class="kv" style="margin-top:1.2rem">
+            <tr><td>Report rate before</td><td>{{ t.report_before if t.report_before is not none else "—" }}{{ "%" if t.report_before is not none }}</td></tr>
+            <tr><td>Report rate after</td><td>{{ t.report_after if t.report_after is not none else "—" }}{{ "%" if t.report_after is not none }}</td></tr>
+        </table>
+        {% if not t.has_after %}
+        <div class="alert alert-info" style="margin-top:1rem"><i class="bi bi-info-circle"></i>
+            <span>Run and import a new GoPhish campaign after people finish their training to measure the change.</span></div>
+        {% endif %}
+    </section>
+</div>
+
+<section class="panel">
+    <div class="panel-head"><h2><i class="bi bi-collection"></i> By module</h2></div>
+    <div class="table-wrap">
+    <table class="table-clean">
+        <thead><tr><th>Module</th><th class="num">Assigned</th><th class="num">Completed</th><th>Completion</th><th>Avg score</th></tr></thead>
+        <tbody>
+        {% for m in data.modules %}
+            <tr>
+                <td><div class="flex" style="flex-wrap:nowrap"><span class="stat-icon bg-cyan" style="width:30px;height:30px;font-size:.85rem"><i class="bi {{ module_meta(m.module.slug).icon }}"></i></span>
+                    <span class="cell-title">{{ m.module.title }}</span></div></td>
+                <td class="num">{{ m.assigned }}</td>
+                <td class="num">{{ m.completed }}</td>
+                <td><div class="risk-bar"><span class="fill-green" style="width:{{ m.completion_rate }}%"></span></div><strong class="num">{{ m.completion_rate }}%</strong></td>
+                <td class="num">{{ (m.avg_score ~ '%') if m.avg_score is not none else '—' }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-head"><h2><i class="bi bi-people"></i> Participants</h2></div>
+    <div class="table-wrap">
+    <table class="table-clean">
+        <thead><tr><th>Participant</th><th>Module</th><th>Risk at assignment</th><th>Status</th><th>Score</th><th>Completed</th></tr></thead>
+        <tbody>
+        {% for a in data.rows %}
+            {% set lvl = 'high' if (a.risk_score or 0) >= 60 else ('medium' if (a.risk_score or 0) >= 30 else 'low') %}
+            <tr>
+                <td><div class="person"><span class="avatar">{{ ui.initials(a.participant.first_name, a.participant.last_name) }}</span>
+                    <span class="cell-title">{{ a.participant.full_name }}</span></div></td>
+                <td>{{ a.module.title }} {% if a.source == 'ai' %}<i class="bi bi-stars text-cyan" title="Recommended by AI"></i>{% endif %}</td>
+                <td>{% if a.risk_score is not none %}<span class="risk-pill risk-{{ lvl }}">{{ a.risk_score }}</span>{% else %}—{% endif %}</td>
+                <td>{% if a.status == 'completed' %}<span class="status status-active">Completed</span>
+                    {% elif a.status == 'opened' %}<span class="status status-warn">Opened</span>
+                    {% elif a.status == 'sent' %}<span class="status status-completed">Email sent</span>
+                    {% else %}<span class="status status-draft">Not sent</span>{% endif %}</td>
+                <td class="num">{% if a.total %}<strong>{{ a.score }}/{{ a.total }}</strong>{% else %}—{% endif %}</td>
+                <td class="muted num">{{ a.completed_at.strftime("%d %b %Y") if a.completed_at else "—" }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</section>
+{% endif %}
+{% endblock %}

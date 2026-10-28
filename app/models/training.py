@@ -63,3 +63,47 @@ class QuizAttempt(db.Model):
 
     def __repr__(self) -> str:
         return f"<QuizAttempt {self.score}/{self.total}>"
+
+
+# Assignment lifecycle
+ASSIGN_ASSIGNED = "assigned"    # created, email not (yet) delivered
+ASSIGN_SENT = "sent"            # invitation email sent
+ASSIGN_OPENED = "opened"        # participant opened the training link
+ASSIGN_COMPLETED = "completed"  # participant finished the quiz
+
+
+class TrainingAssignment(db.Model):
+    """A training module assigned to one participant, reached by a private link.
+
+    The token is the only credential for the public training page, so it is
+    long and random. No passwords or personal answers are stored — only the
+    quiz score.
+    """
+    __tablename__ = "training_assignments"
+
+    id = db.Column(db.Integer, primary_key=True)
+    participant_id = db.Column(
+        db.Integer, db.ForeignKey("participants.id", ondelete="CASCADE"),
+        nullable=False, index=True)
+    module_id = db.Column(
+        db.Integer, db.ForeignKey("training_modules.id", ondelete="CASCADE"),
+        nullable=False, index=True)
+    token = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    reason = db.Column(db.Text, nullable=True)          # why it was assigned
+    source = db.Column(db.String(10), nullable=False, default="rules")  # ai | rules
+    status = db.Column(db.String(12), nullable=False, default=ASSIGN_ASSIGNED)
+    risk_score = db.Column(db.Integer, nullable=True)   # score at assignment time
+    email_error = db.Column(db.Text, nullable=True)
+    score = db.Column(db.Integer, nullable=True)
+    total = db.Column(db.Integer, nullable=True)
+    created_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    sent_at = db.Column(db.DateTime, nullable=True)
+    opened_at = db.Column(db.DateTime, nullable=True)
+    completed_at = db.Column(db.DateTime, nullable=True)
+
+    participant = db.relationship("Participant")
+    module = db.relationship("TrainingModule")
+
+    def __repr__(self) -> str:
+        return f"<TrainingAssignment p={self.participant_id} m={self.module_id} {self.status}>"

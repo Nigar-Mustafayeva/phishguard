@@ -48,7 +48,7 @@ def create_app(config_name: str | None = None, test_config: dict | None = None) 
     # page, static files and health.
     @app.before_request
     def require_login():
-        if request.endpoint in ("landing.index", "auth.login", "static", "health"):
+        if request.endpoint in ("landing.index", "learn.take", "auth.login", "static", "health"):
             return
         if not current_user.is_authenticated:
             return redirect(url_for("auth.login", next=request.path))
@@ -69,6 +69,8 @@ def _register_blueprints(app: Flask) -> None:
     from .blueprints.integration.routes import integration_bp
     from .blueprints.settings.routes import settings_bp
     from .blueprints.risk.routes import risk_bp
+    from .blueprints.assignments.routes import assignments_bp
+    from .blueprints.learn.routes import learn_bp
 
     app.register_blueprint(landing_bp)
     app.register_blueprint(auth_bp)
@@ -82,6 +84,8 @@ def _register_blueprints(app: Flask) -> None:
     app.register_blueprint(integration_bp)
     app.register_blueprint(settings_bp)
     app.register_blueprint(risk_bp)
+    app.register_blueprint(assignments_bp)
+    app.register_blueprint(learn_bp)
 
 
 def _register_misc(app: Flask) -> None:

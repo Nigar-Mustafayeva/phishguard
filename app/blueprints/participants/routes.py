@@ -12,7 +12,7 @@ from flask_login import login_required, current_user
 from email_validator import validate_email, EmailNotValidError
 
 from app.extensions import db
-from app.models import Participant, Department, AuditLog
+from app.models import Participant, Department, AuditLog, TrainingAssignment
 from app.blueprints.auth.decorators import admin_required
 from .forms import ParticipantForm, CSVImportForm
 
@@ -100,6 +100,7 @@ def edit(pid):
 def delete(pid):
     p = db.session.get(Participant, pid) or _abort_404()
     email = p.email
+    TrainingAssignment.query.filter_by(participant_id=p.id).delete()
     db.session.delete(p)
     db.session.add(AuditLog(user_id=current_user.id, action="participant_delete",
                             detail=email, ip_address=request.remote_addr))

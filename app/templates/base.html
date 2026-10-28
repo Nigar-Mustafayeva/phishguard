@@ -42,8 +42,12 @@
             <div class="nav-section">Learn</div>
             {{ nav('training.index', 'bi-mortarboard', 'Training', request.blueprint == 'training' and request.endpoint != 'training.lab') }}
             <a href="{{ url_for('training.lab') }}" class="nav-link {% if request.endpoint == 'training.lab' %}active{% endif %}">
-                <i class="bi bi-inboxes"></i> Phishing lab <span class="nav-badge">NEW</span>
+                <i class="bi bi-inboxes"></i> Phishing lab
             </a>
+            <a href="{{ url_for('assignments.index') }}" class="nav-link {% if request.blueprint == 'assignments' and request.endpoint != 'assignments.effectiveness' %}active{% endif %}">
+                <i class="bi bi-stars"></i> Assign training <span class="nav-badge">AI</span>
+            </a>
+            {{ nav('assignments.effectiveness', 'bi-graph-up-arrow', 'Effectiveness', request.endpoint == 'assignments.effectiveness') }}
 
             <div class="nav-section">System</div>
             {{ nav('integration.index', 'bi-hdd-network', 'Integrations', request.blueprint == 'integration') }}

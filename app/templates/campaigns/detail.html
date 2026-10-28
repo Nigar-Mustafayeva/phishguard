@@ -30,7 +30,14 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button class="btn btn-primary"><i class="bi bi-rocket-takeoff"></i> Launch</button>
             </form>
-        {% elif camp.status == STATUS_ACTIVE %}
+        {% elif camp.gophish_campaign_id and current_user.is_admin %}
+            <form method="post" action="{{ url_for('campaigns.delete', cid=camp.id) }}" style="display:inline"
+                  onsubmit="return confirm('Remove this imported campaign and its events from PhishGuard? GoPhish is not changed.');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-outline danger-btn"><i class="bi bi-trash"></i> Remove</button>
+            </form>
+        {% endif %}
+        {% if camp.status == STATUS_ACTIVE %}
             <form method="post" action="{{ url_for('campaigns.stop', cid=camp.id) }}" style="display:inline"
                   onsubmit="return confirm('Stop this campaign?');">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

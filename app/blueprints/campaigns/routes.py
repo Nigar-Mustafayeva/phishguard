@@ -173,8 +173,10 @@ def sync(cid):
 @admin_required
 def delete(cid):
     camp = db.session.get(Campaign, cid) or abort(404)
-    if camp.status != STATUS_DRAFT:
-        flash("Only draft campaigns can be deleted.", "danger")
+    # Drafts, and campaigns imported from GoPhish (a local copy of GoPhish
+    # data), can be removed. Locally launched campaigns keep their history.
+    if camp.status != STATUS_DRAFT and camp.gophish_campaign_id is None:
+        flash("Only draft or imported campaigns can be deleted.", "danger")
         return redirect(url_for("campaigns.detail", cid=camp.id))
     name = camp.name
     db.session.delete(camp)
@@ -182,4 +184,8 @@ def delete(cid):
                             detail=name, ip_address=request.remote_addr))
     db.session.commit()
     flash("Campaign deleted.", "success")
-    return redirect(url_for("campaigns.index"))
+    # Only local paths are allowed as a return target (no open redirect).
+    nxt = request.form.get("next", "")
+    if not nxt.startswith("/") or nxt.startswith("//"):
+        nxt = url_for("campaigns.index")
+    return redirect(nxt)

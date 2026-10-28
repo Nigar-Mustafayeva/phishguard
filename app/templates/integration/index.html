@@ -72,6 +72,36 @@
     <p class="muted">There are no campaigns in GoPhish yet.</p>
     {% endif %}
 </section>
+
+{% if orphaned %}
+<section class="panel">
+    <div class="panel-head"><div><h2><i class="bi bi-exclamation-triangle text-amber"></i> No longer in GoPhish</h2>
+        <span class="muted">These campaigns were imported earlier but have since been deleted in GoPhish</span></div></div>
+    <div class="table-wrap">
+    <table class="table-clean">
+        <thead><tr><th>Campaign</th><th>GoPhish ID</th><th></th></tr></thead>
+        <tbody>
+        {% for c in orphaned %}
+            <tr>
+                <td><a class="cell-link" href="{{ url_for('campaigns.detail', cid=c.id) }}" title="{{ c.name }}">{{ c.name }}</a></td>
+                <td class="muted num">#{{ c.gophish_campaign_id }}</td>
+                <td class="row-actions">
+                    {% if current_user.is_admin %}
+                    <form method="post" action="{{ url_for('campaigns.delete', cid=c.id) }}"
+                          onsubmit="return confirm('Remove this campaign and its events from PhishGuard?');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="next" value="{{ url_for('integration.index') }}">
+                        <button class="btn btn-outline btn-sm danger-btn"><i class="bi bi-trash"></i> Remove</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</section>
+{% endif %}
 {% endif %}
 
 <section class="panel">

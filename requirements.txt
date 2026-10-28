@@ -10,3 +10,4 @@ requests==2.32.3
 reportlab==4.2.2
 gunicorn==22.0.0
 psycopg[binary]==3.2.3
+anthropic==2.3.0

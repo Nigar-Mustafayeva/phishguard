@@ -9,7 +9,10 @@ from app.models.campaign import (
     EVENT_SENT, EVENT_DELIVERED, EVENT_OPENED, EVENT_CLICKED,
     EVENT_SUBMITTED, EVENT_REPORTED,
 )
-from app.models.training import TrainingModule, QuizQuestion, QuizAttempt
+from app.models.training import (
+    TrainingModule, QuizQuestion, QuizAttempt, TrainingAssignment,
+    ASSIGN_ASSIGNED, ASSIGN_SENT, ASSIGN_OPENED, ASSIGN_COMPLETED,
+)
 from app.models.system import ReportRecord, AuditLog, IntegrationSetting
 
 __all__ = [
@@ -20,6 +23,7 @@ __all__ = [
     "STATUS_STOPPED",
     "EVENT_SENT", "EVENT_DELIVERED", "EVENT_OPENED", "EVENT_CLICKED",
     "EVENT_SUBMITTED", "EVENT_REPORTED",
-    "TrainingModule", "QuizQuestion", "QuizAttempt",
+    "TrainingModule", "QuizQuestion", "QuizAttempt", "TrainingAssignment",
+    "ASSIGN_ASSIGNED", "ASSIGN_SENT", "ASSIGN_OPENED", "ASSIGN_COMPLETED",
     "ReportRecord", "AuditLog", "IntegrationSetting",
 ]

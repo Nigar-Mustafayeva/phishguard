@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex">
+    <title>{{ mod.title }} · Security training</title>
+    <script>document.documentElement.classList.add('js');</script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    <style>
+      .learn{max-width:1100px;margin:0 auto;padding:1.5rem 1.25rem 3rem}
+      .learn-top{display:flex;align-items:center;gap:1rem;justify-content:space-between;flex-wrap:wrap;margin-bottom:1.5rem}
+      .learn h1{font-size:1.7rem;margin:.6rem 0 .3rem}
+      .learn .content-gap > * + *{margin-top:1.25rem}
+    </style>
+</head>
+<body class="layout" style="display:block">
+<main class="learn">
+    <div class="learn-top">
+        <span class="brand" style="padding:0">
+            <span class="brand-mark"><i class="bi bi-shield-lock-fill"></i></span>
+            <span>PhishGuard<small>Security training</small></span>
+        </span>
+        <span class="muted"><i class="bi bi-person-circle"></i> {{ a.participant.first_name }}</span>
+    </div>
+
+    <div class="training-hero" style="margin-bottom:1.25rem">
+        <div class="flex">
+            <span class="level level-{{ meta.level }}">{{ meta.level }}</span>
+            <span class="muted"><i class="bi bi-clock"></i> {{ meta.minutes }} min</span>
+            {% if a.status == 'completed' and results is none %}<span class="status status-active">Completed</span>{% endif %}
+        </div>
+        <h1>{{ mod.title }}</h1>
+        <p>{{ meta.summary }}</p>
+        {% if a.reason %}
+        <div class="article-tip" style="margin-top:1rem"><i class="bi bi-stars"></i>
+            <span><strong>Why this module for you:</strong> {{ a.reason }}</span></div>
+        {% endif %}
+    </div>
+
+    <div class="module-layout">
+        <section class="panel">
+            <div class="panel-head"><h2><i class="bi {{ meta.icon }}"></i> Lesson</h2></div>
+            <div class="article">{{ article }}</div>
+        </section>
+
+        <div class="sticky" style="top:1.5rem">
+        {% if results is not none %}
+            {% set pct = (100 * score / total) | round | int if total else 0 %}
+            <section class="panel">
+                <div class="score-banner {{ 'good' if score == total else 'partial' }}">
+                    <div class="score-ring" style="--p:{{ pct }};{{ '' if score == total else '--ring:var(--amber)' }}"><span>{{ pct }}%</span></div>
+                    <div>
+                        <h3>Score: {{ score }}/{{ total }} — thank you!</h3>
+                        <p>Your training is complete. Review the explanations below.</p>
+                    </div>
+                </div>
+                {% for r in results %}
+                <div class="quiz-q">
+                    <p class="quiz-question">{{ loop.index }}. {{ r.q.question }}</p>
+                    {% for key, text in r.options %}
+                        <div class="quiz-review {% if key == r.q.correct_option %}correct{% elif key == r.chosen %}wrong{% endif %}">
+                            {% if key == r.q.correct_option %}<i class="bi bi-check-circle-fill"></i>
+                            {% elif key == r.chosen %}<i class="bi bi-x-circle-fill"></i>
+                            {% else %}<i class="bi bi-circle"></i>{% endif %}
+                            {{ text }}
+                        </div>
+                    {% endfor %}
+                    <div class="explanation"><i class="bi bi-lightbulb"></i> <span>{{ r.q.explanation }}</span></div>
+                </div>
+                {% endfor %}
+            </section>
+        {% elif a.status == 'completed' %}
+            <section class="panel">
+                <div class="score-banner good">
+                    <div class="score-ring" style="--p:{{ (100 * a.score / a.total) | round | int if a.total else 100 }}"><span>{{ a.score }}/{{ a.total }}</span></div>
+                    <div><h3>Already completed</h3><p>You finished this training. Feel free to re-read the lesson.</p></div>
+                </div>
+            </section>
+        {% else %}
+            <section class="panel">
+                <div class="panel-head"><h2><i class="bi bi-patch-question"></i> Quiz</h2>
+                    <span class="muted">{{ questions_opts|length }} questions</span></div>
+                <div class="quiz-progress">
+                    <div class="progress-track"><span id="quizBar" style="width:0%"></span></div>
+                    <span id="quizStep">1 / {{ questions_opts|length }}</span>
+                </div>
+                <form method="post" id="quizForm" class="quiz-stepper">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    {% for q, options in questions_opts %}
+                    <div class="quiz-q {{ 'current' if loop.first }}" data-correct="{{ q.correct_option }}">
+                        <p class="quiz-question">{{ loop.index }}. {{ q.question }}</p>
+                        {% for key, text in options %}
+                        <label class="quiz-option">
+                            <input type="radio" name="q{{ q.id }}" value="{{ key }}" required>
+                            <span class="quiz-key">{{ key }}</span><span>{{ text }}</span>
+                        </label>
+                        {% endfor %}
+                        <div class="quiz-feedback">
+                            <div class="explanation"><i class="bi bi-lightbulb"></i>
+                                <span><strong class="fb-title"></strong> {{ q.explanation }}</span></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    <div class="quiz-nav">
+                        <button class="btn btn-primary" type="button" id="nextBtn" disabled>Next question <i class="bi bi-arrow-right"></i></button>
+                    </div>
+                    <div class="form-actions quiz-submit-fallback">
+                        <button class="btn btn-primary" type="submit">Finish training</button>
+                    </div>
+                </form>
+            </section>
+        {% endif %}
+        </div>
+    </div>
+    <p class="muted" style="text-align:center;margin-top:2rem">Results are used for security awareness only — never to punish.</p>
+</main>
+
+{% if results is none and a.status != 'completed' %}
+<script>
+  (function () {
+    const form = document.getElementById('quizForm');
+    const qs = [...form.querySelectorAll('.quiz-q')];
+    const next = document.getElementById('nextBtn');
+    const bar = document.getElementById('quizBar');
+    const step = document.getElementById('quizStep');
+    let i = 0;
+    function show(n) {
+      qs.forEach((q, k) => q.classList.toggle('current', k === n));
+      step.textContent = (n + 1) + ' / ' + qs.length;
+      bar.style.width = (n / qs.length * 100) + '%';
+      next.disabled = true;
+      next.innerHTML = n === qs.length - 1 ? 'Finish training <i class="bi bi-check2"></i>'
+                                           : 'Next question <i class="bi bi-arrow-right"></i>';
+    }
+    qs.forEach(q => q.querySelectorAll('.quiz-option').forEach(opt => opt.addEventListener('click', () => {
+      if (opt.classList.contains('locked')) return;
+      const input = opt.querySelector('input');
+      input.checked = true;
+      const right = input.value === q.dataset.correct;
+      q.querySelectorAll('.quiz-option').forEach(o => {
+        o.classList.add('locked');
+        if (o.querySelector('input').value === q.dataset.correct) o.classList.add('is-correct');
+      });
+      if (!right) opt.classList.add('is-wrong');
+      const fb = q.querySelector('.quiz-feedback');
+      fb.querySelector('.fb-title').textContent = right ? 'Correct!' : 'Not quite.';
+      fb.classList.add('show');
+      bar.style.width = ((i + 1) / qs.length * 100) + '%';
+      next.disabled = false;
+    })));
+    next.addEventListener('click', () => { if (i < qs.length - 1) { i++; show(i); } else form.submit(); });
+    show(0);
+  })();
+</script>
+{% endif %}
+</body>
+</html>

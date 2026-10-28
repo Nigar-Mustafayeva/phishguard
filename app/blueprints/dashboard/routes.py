@@ -4,7 +4,7 @@ Only campaigns linked to a GoPhish campaign (gophish_campaign_id set) are
 shown, so demo and locally created campaigns do not mix into the real numbers.
 All figures are computed from stored database records.
 """
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, request
 from flask_login import login_required
 
 from app.models import Campaign, CampaignParticipant, STATUS_DRAFT
@@ -18,9 +18,15 @@ dashboard_bp = Blueprint("dashboard", __name__)
 @dashboard_bp.route("/dashboard")
 @login_required
 def index():
-    imported = (Campaign.query
-                .filter(Campaign.gophish_campaign_id.isnot(None))
-                .order_by(Campaign.id.desc()).all())
+    all_imported = (Campaign.query
+                    .filter(Campaign.gophish_campaign_id.isnot(None))
+                    .order_by(Campaign.id.desc()).all())
+
+    # Optional ?campaign=<id> narrows every figure to one imported campaign.
+    selected = request.args.get("campaign", type=int)
+    imported = [c for c in all_imported if c.id == selected] or all_imported
+    if len(imported) == len(all_imported):
+        selected = None
     ids = [c.id for c in imported]
 
     totals = overall_metrics(imported)
@@ -52,4 +58,5 @@ def index():
 
     return render_template("dashboard/index.html", stats=totals, chart=chart,
                           departments=departments, recent=recent, risk=risk,
-                          has_imported=bool(ids))
+                          has_imported=bool(ids), campaigns=all_imported,
+                          selected=selected)

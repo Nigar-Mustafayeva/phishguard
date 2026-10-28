@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}Review recommendations · PhishGuard{% endblock %}
+{% block page_title %}Review recommendations{% endblock %}
+{% block page_sub %}Adjust anything you like, then assign and send.{% endblock %}
+
+{% block content %}
+<a href="{{ url_for('assignments.index') }}" class="back-link"><i class="bi bi-arrow-left"></i> Assign training</a>
+
+{% if notice %}
+<div class="demo-banner"><i class="bi bi-info-circle"></i><span>{{ notice }}</span></div>
+{% endif %}
+
+<form method="post" action="{{ url_for('assignments.create') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="training-grid" style="grid-template-columns:repeat(auto-fill,minmax(340px,1fr))">
+    {% for row in rows %}
+        {% set r = row.profile %}{% set p = r.participant %}
+        <section class="panel" style="display:flex;flex-direction:column;gap:.9rem">
+            <input type="hidden" name="pid" value="{{ p.id }}">
+            <input type="hidden" name="source_{{ p.id }}" value="{{ row.source }}">
+            <input type="hidden" name="risk_{{ p.id }}" value="{{ r.score }}">
+            <div class="flex" style="justify-content:space-between;flex-wrap:nowrap">
+                <div class="person"><span class="avatar">{{ ui.initials(p.first_name, p.last_name) }}</span>
+                    <div><span class="cell-title">{{ p.full_name }}</span><span class="cell-sub">{{ p.email }}</span></div></div>
+                <span class="risk-pill risk-{{ r.level }}">{{ r.score }} · {{ r.level_label }}</span>
+            </div>
+            <div class="flex" style="font-size:.78rem;color:var(--muted);gap:1rem">
+                <span><i class="bi bi-envelope"></i> {{ r.stats.sent }} targeted</span>
+                <span><i class="bi bi-cursor"></i> {{ r.stats.clicked }} clicked</span>
+                <span><i class="bi bi-input-cursor-text"></i> {{ r.stats.submitted }} submitted</span>
+                <span><i class="bi bi-flag"></i> {{ r.stats.reported }} reported</span>
+            </div>
+            <div>
+                <label class="form-label">Training module</label>
+                <select name="m1_{{ p.id }}" class="form-control">
+                    {% for m in modules %}<option value="{{ m.slug }}" {{ 'selected' if row.slugs[0] == m.slug }}>{{ m.title }}</option>{% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="form-label">Second module (optional)</label>
+                <select name="m2_{{ p.id }}" class="form-control">
+                    <option value="">— none —</option>
+                    {% for m in modules %}<option value="{{ m.slug }}" {{ 'selected' if row.slugs|length > 1 and row.slugs[1] == m.slug }}>{{ m.title }}</option>{% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="form-label">
+                    {% if row.source == 'ai' %}<span class="text-cyan"><i class="bi bi-stars"></i> AI explanation</span>
+                    {% else %}<i class="bi bi-list-check"></i> Reason (rules){% endif %}
+                    <span class="muted" style="font-weight:400">· included in the email</span></label>
+                <textarea name="reason_{{ p.id }}" class="form-control" rows="3">{{ row.reason }}</textarea>
+            </div>
+        </section>
+    {% else %}
+        <p class="muted">None of the selected participants has campaign data yet.</p>
+    {% endfor %}
+    </div>
+
+    {% if rows %}
+    <section class="panel">
+        <div class="flex" style="justify-content:space-between">
+            <span class="muted">{{ rows|length }} participants ·
+                {% if smtp_ready %}invitations will be emailed with a personal training link.
+                {% else %}SMTP is not configured, so you'll get links to copy and share.{% endif %}</span>
+            <div class="flex">
+                <button class="btn btn-outline" name="send" value="0"><i class="bi bi-check2"></i> Assign only</button>
+                <button class="btn btn-primary" name="send" value="1" {{ 'disabled' if not smtp_ready }}><i class="bi bi-send"></i> Assign &amp; email</button>
+            </div>
+        </div>
+    </section>
+    {% endif %}
+</form>
+{% endblock %}

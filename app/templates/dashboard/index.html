@@ -4,6 +4,16 @@
 {% block page_title %}Dashboard{% endblock %}
 {% block page_sub %}Results of the campaigns imported from GoPhish.{% endblock %}
 {% block topbar_actions %}
+{% if campaigns %}
+<form method="get" class="filter-form">
+    <select name="campaign" class="form-control" onchange="this.form.submit()" aria-label="Campaign">
+        <option value="">All imported campaigns ({{ campaigns|length }})</option>
+        {% for c in campaigns %}
+        <option value="{{ c.id }}" {{ 'selected' if c.id == selected }}>{{ c.name }}</option>
+        {% endfor %}
+    </select>
+</form>
+{% endif %}
 <a href="{{ url_for('integration.index') }}" class="btn btn-primary btn-sm"><i class="bi bi-cloud-download"></i> Import from GoPhish</a>
 {% endblock %}
 
@@ -21,8 +31,13 @@
 {% else %}
 <div class="alert alert-info">
     <i class="bi bi-funnel"></i>
+    {% if selected %}
+    <span>Showing results for <strong>{{ (campaigns | selectattr('id', 'equalto', selected) | first).name }}</strong>.
+        <a href="{{ url_for('dashboard.index') }}">Show all imported campaigns</a></span>
+    {% else %}
     <span>Showing only campaigns imported from GoPhish. Demo and locally created campaigns are
     listed on the <a href="{{ url_for('campaigns.index') }}">Campaigns</a> page.</span>
+    {% endif %}
 </div>
 
 <!-- Stat cards -->
