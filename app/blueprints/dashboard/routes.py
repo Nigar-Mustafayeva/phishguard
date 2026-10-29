@@ -24,9 +24,9 @@ def index():
 
     # Optional ?campaign=<id> narrows every figure to one imported campaign.
     selected = request.args.get("campaign", type=int)
-    imported = [c for c in all_imported if c.id == selected] or all_imported
-    if len(imported) == len(all_imported):
-        selected = None
+    imported = [c for c in all_imported if c.id == selected]
+    if not imported:
+        imported, selected = all_imported, None
     ids = [c.id for c in imported]
 
     totals = overall_metrics(imported)

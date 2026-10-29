@@ -13,6 +13,14 @@
         {% endfor %}
     </select>
 </form>
+{% if selected %}
+<form method="post" action="{{ url_for('campaigns.delete', cid=selected) }}"
+      onsubmit="return confirm('Delete this campaign and its imported results from PhishGuard? It stays in GoPhish.');">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="next" value="{{ url_for('dashboard.index') }}">
+    <button class="btn btn-outline btn-sm btn-danger-outline" title="Delete this campaign"><i class="bi bi-trash"></i> Delete</button>
+</form>
+{% endif %}
 {% endif %}
 <a href="{{ url_for('integration.index') }}" class="btn btn-primary btn-sm"><i class="bi bi-cloud-download"></i> Import from GoPhish</a>
 {% endblock %}
@@ -86,7 +94,7 @@
         {% if recent %}
         <div class="table-wrap">
         <table class="table-clean">
-            <thead><tr><th>Campaign</th><th>Status</th><th class="num">Sent</th><th class="num">Clicks</th><th>Click rate</th></tr></thead>
+            <thead><tr><th>Campaign</th><th>Status</th><th class="num">Sent</th><th class="num">Clicks</th><th>Click rate</th><th style="text-align:right"></th></tr></thead>
             <tbody>
             {% for c in recent %}
                 <tr>
@@ -95,6 +103,14 @@
                     <td class="num">{{ c.sent }}</td>
                     <td class="num">{{ c.clicks }}</td>
                     <td><div class="risk-bar"><span class="fill-amber" style="width:{{ c.click_rate }}%"></span></div><strong class="num">{{ c.click_rate }}%</strong></td>
+                    <td class="row-actions">
+                        <form method="post" action="{{ url_for('campaigns.delete', cid=c.id) }}"
+                              onsubmit="return confirm('Delete this campaign and its imported results from PhishGuard? It stays in GoPhish.');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="next" value="{{ url_for('dashboard.index') }}">
+                            <button class="icon-link danger" title="Delete campaign"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </td>
                 </tr>
             {% endfor %}
             </tbody>

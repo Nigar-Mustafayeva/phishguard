@@ -13,11 +13,12 @@ from flask_login import login_required, current_user
 
 from app.extensions import db
 from app.models import (Campaign, EmailTemplate, Participant, CampaignParticipant,
-                        CampaignEvent, AuditLog,
+                        CampaignEvent, AuditLog, ReportRecord,
                         STATUS_DRAFT, STATUS_ACTIVE, STATUS_COMPLETED,
                         STATUS_STOPPED, EVENT_SENT)
 from app.blueprints.auth.decorators import admin_required
 from app.services import gophish_service
+from app.services.participant_import import CSVError, parse_csv, save_rows
 from .forms import CampaignForm
 
 campaigns_bp = Blueprint("campaigns", __name__, url_prefix="/campaigns")
@@ -28,6 +29,25 @@ def _populate_choices(form):
                                 for t in EmailTemplate.query.order_by(EmailTemplate.name)]
     form.participant_ids.choices = [(p.id, f"{p.full_name} ({p.email})")
                                     for p in Participant.query.order_by(Participant.first_name)]
+
+
+def _selected_participant_ids(form):
+    """Ticked participants plus everyone in the uploaded CSV (created if new).
+    Raises CSVError when the file cannot be used."""
+    ids = list(form.participant_ids.data or [])
+    upload = form.csv_file.data
+    if upload and getattr(upload, "filename", ""):
+        rows, error_rows = parse_csv(upload.stream.read())
+        if not rows:
+            raise CSVError("No valid participants found in the CSV file.")
+        people, added = save_rows(rows)
+        ids += [p.id for p in people]
+        msg = f"CSV: {len(people)} participants added to the campaign ({added} new)."
+        if error_rows:
+            msg += f" {len(error_rows)} rows skipped (rows " + ", ".join(
+                str(n) for n, _ in error_rows[:5]) + ")."
+        flash(msg, "info")
+    return list(dict.fromkeys(ids))
 
 
 @campaigns_bp.route("/")
@@ -43,6 +63,12 @@ def create():
     form = CampaignForm()
     _populate_choices(form)
     if form.validate_on_submit():
+        try:
+            pids = _selected_participant_ids(form)
+        except CSVError as exc:
+            db.session.rollback()
+            form.csv_file.errors.append(str(exc))
+            return render_template("campaigns/form.html", form=form, title="New campaign")
         camp = Campaign(
             name=form.name.data.strip(), description=form.description.data,
             template_id=form.template_id.data, status=STATUS_DRAFT,
@@ -50,7 +76,7 @@ def create():
         )
         db.session.add(camp)
         db.session.flush()
-        for pid in form.participant_ids.data:
+        for pid in pids:
             db.session.add(CampaignParticipant(campaign_id=camp.id, participant_id=pid))
         db.session.add(AuditLog(user_id=current_user.id, action="campaign_create",
                                 detail=camp.name, ip_address=request.remote_addr))
@@ -86,12 +112,18 @@ def edit(cid):
     if request.method == "GET":
         form.participant_ids.data = [cp.participant_id for cp in camp.participants]
     if form.validate_on_submit():
+        try:
+            pids = _selected_participant_ids(form)
+        except CSVError as exc:
+            db.session.rollback()
+            form.csv_file.errors.append(str(exc))
+            return render_template("campaigns/form.html", form=form, title="Edit campaign")
         camp.name = form.name.data.strip()
         camp.description = form.description.data
         camp.template_id = form.template_id.data
         # Reset participant links
         CampaignParticipant.query.filter_by(campaign_id=camp.id).delete()
-        for pid in form.participant_ids.data:
+        for pid in pids:
             db.session.add(CampaignParticipant(campaign_id=camp.id, participant_id=pid))
         db.session.add(AuditLog(user_id=current_user.id, action="campaign_edit",
                                 detail=camp.name, ip_address=request.remote_addr))
@@ -179,6 +211,8 @@ def delete(cid):
         flash("Only draft or imported campaigns can be deleted.", "danger")
         return redirect(url_for("campaigns.detail", cid=camp.id))
     name = camp.name
+    # Keep the report history, but unlink it: the foreign key would block the delete.
+    ReportRecord.query.filter_by(campaign_id=camp.id).update({"campaign_id": None})
     db.session.delete(camp)
     db.session.add(AuditLog(user_id=current_user.id, action="campaign_delete",
                             detail=name, ip_address=request.remote_addr))

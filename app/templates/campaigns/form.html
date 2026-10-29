@@ -6,7 +6,7 @@
 {% block content %}
 <a href="{{ url_for('campaigns.index') }}" class="back-link"><i class="bi bi-arrow-left"></i> Campaigns</a>
 <section class="panel panel-narrow">
-    <form method="post" novalidate>
+    <form method="post" enctype="multipart/form-data" novalidate>
         {{ form.hidden_tag() }}
         <div class="form-group">
             {{ form.name.label(class="form-label") }}
@@ -22,10 +22,34 @@
             {{ form.template_id(class="form-control") }}
             {% for e in form.template_id.errors %}<small class="field-error">{{ e }}</small>{% endfor %}
         </div>
+
+        {% set chosen = form.participant_ids.data or [] %}
         <div class="form-group">
-            {{ form.participant_ids.label(class="form-label") }}
-            {{ form.participant_ids(class="form-control", size="8") }}
-            <small class="form-hint">Hold Ctrl (or Cmd) to select several participants.</small>
+            <div class="flex" style="justify-content:space-between">
+                <span class="form-label" style="margin:0">Participants
+                    <span class="muted" style="font-weight:400">· <span id="pickCount">{{ chosen|length }}</span> selected</span></span>
+                <label class="pick-all"><input type="checkbox" class="form-check-input" id="pickAll"> Select all</label>
+            </div>
+            <input type="search" class="form-control" id="pickSearch" placeholder="Search by name or email" style="margin:.5rem 0">
+            <div class="pick-list" id="pickList">
+                {% for value, label in form.participant_ids.choices %}
+                <label class="pick-item">
+                    <input type="checkbox" class="form-check-input" name="participant_ids" value="{{ value }}" {{ 'checked' if value in chosen }}>
+                    <span>{{ label }}</span>
+                </label>
+                {% else %}
+                <p class="muted" style="margin:.5rem">No participants yet — upload a CSV below.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="form-group">
+            {{ form.csv_file.label(class="form-label") }}
+            {{ form.csv_file(class="form-control", accept=".csv") }}
+            <small class="form-hint">Optional. Everyone in the file is added to this campaign (new people are also saved as participants).
+                Columns: first_name, last_name, email, department — Excel and GoPhish exports work too.
+                <a href="{{ url_for('participants.sample_csv') }}">Sample CSV</a></small>
+            {% for e in form.csv_file.errors %}<small class="field-error">{{ e }}</small>{% endfor %}
         </div>
         <div class="form-actions">
             <a href="{{ url_for('campaigns.index') }}" class="btn btn-outline">Cancel</a>
@@ -33,4 +57,30 @@
         </div>
     </form>
 </section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    const list = document.getElementById('pickList');
+    const boxes = [...list.querySelectorAll('input[type=checkbox]')];
+    const count = document.getElementById('pickCount');
+    const all = document.getElementById('pickAll');
+    const search = document.getElementById('pickSearch');
+    const visible = () => boxes.filter(b => !b.closest('.pick-item').hidden);
+    const update = () => {
+      count.textContent = boxes.filter(b => b.checked).length;
+      const v = visible();
+      all.checked = v.length > 0 && v.every(b => b.checked);
+    };
+    boxes.forEach(b => b.addEventListener('change', update));
+    all.addEventListener('change', () => { visible().forEach(b => b.checked = all.checked); update(); });
+    search.addEventListener('input', () => {
+      const q = search.value.trim().toLowerCase();
+      boxes.forEach(b => { const item = b.closest('.pick-item'); item.hidden = !item.textContent.toLowerCase().includes(q); });
+      update();
+    });
+    update();
+  })();
+</script>
 {% endblock %}

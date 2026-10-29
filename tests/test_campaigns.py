@@ -71,3 +71,57 @@ def test_analyst_cannot_delete_campaign(auth_client, analyst_client, app):
     cid = campaign_id_by_name(app, "C6")
     resp = analyst_client.post(f"/campaigns/{cid}/delete")
     assert resp.status_code == 403
+
+
+def test_create_campaign_with_csv_upload(auth_client, app):
+    import io
+    tid, pid = seed_template_and_participant(app)
+    # Excel in many locales saves with ";" and capitalised headers.
+    csv_data = ("First Name;Last Name;Email;Position\n"
+                "New;Person;new.person@example.com;Sales\n"
+                "P;One;P.ONE@example.com;IT\n"          # already exists
+                "Broken;Row;not-an-email;IT\n")
+    resp = auth_client.post("/campaigns/new", data={
+        "name": "CSV camp", "template_id": tid,
+        "csv_file": (io.BytesIO(csv_data.encode("cp1254")), "people.csv"),
+    }, content_type="multipart/form-data", follow_redirects=True)
+    assert resp.status_code == 200
+    cid = campaign_id_by_name(app, "CSV camp")
+    with app.app_context():
+        from app.models import CampaignParticipant, Participant
+        emails = {cp.participant.email for cp in
+                  CampaignParticipant.query.filter_by(campaign_id=cid)}
+        assert emails == {"new.person@example.com", "p.one@example.com"}
+        assert Participant.query.filter_by(email="p.one@example.com").count() == 1
+        assert Participant.query.filter_by(
+            email="new.person@example.com").first().department.name == "Sales"
+
+
+def test_csv_without_email_column_shows_error(auth_client, app):
+    import io
+    tid, _ = seed_template_and_participant(app)
+    resp = auth_client.post("/campaigns/new", data={
+        "name": "Bad CSV", "template_id": tid,
+        "csv_file": (io.BytesIO(b"name,phone\nA,1\n"), "x.csv"),
+    }, content_type="multipart/form-data", follow_redirects=True)
+    assert b"No email column found" in resp.data
+    assert campaign_id_by_name(app, "Bad CSV") is None
+
+
+def test_delete_imported_campaign_with_report_history(auth_client, app):
+    with app.app_context():
+        from app.models import Campaign, ReportRecord, STATUS_COMPLETED
+        camp = Campaign(name="Imported", status=STATUS_COMPLETED,
+                        is_demo=False, gophish_campaign_id=42)
+        db.session.add(camp)
+        db.session.flush()
+        db.session.add(ReportRecord(campaign_id=camp.id, format="pdf"))
+        db.session.commit()
+        cid = camp.id
+    resp = auth_client.post(f"/campaigns/{cid}/delete",
+                            data={"next": "/dashboard"}, follow_redirects=False)
+    assert resp.headers["Location"].endswith("/dashboard")
+    with app.app_context():
+        from app.models import Campaign, ReportRecord
+        assert db.session.get(Campaign, cid) is None
+        assert ReportRecord.query.one().campaign_id is None

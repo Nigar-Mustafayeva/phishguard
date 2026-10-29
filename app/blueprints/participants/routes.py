@@ -3,22 +3,17 @@
 Participants are the people targeted by simulations. For the public demo they
 are synthetic (@example.com). Real passwords are never involved here.
 """
-import csv
-import io
-
 from flask import (Blueprint, render_template, redirect, url_for, flash,
                    request, Response)
 from flask_login import login_required, current_user
-from email_validator import validate_email, EmailNotValidError
 
 from app.extensions import db
 from app.models import Participant, Department, AuditLog, TrainingAssignment
 from app.blueprints.auth.decorators import admin_required
+from app.services.participant_import import CSV_COLUMNS, CSVError, parse_csv, save_rows
 from .forms import ParticipantForm, CSVImportForm
 
 participants_bp = Blueprint("participants", __name__, url_prefix="/participants")
-
-CSV_COLUMNS = ["first_name", "last_name", "email", "department"]
 
 
 def _find_or_create_department(name: str):
@@ -115,50 +110,20 @@ def import_csv():
     form = CSVImportForm()
     if form.validate_on_submit():
         try:
-            raw = form.file.data.stream.read().decode("utf-8-sig")
-        except UnicodeDecodeError:
-            flash("The file must be UTF-8 encoded.", "danger")
+            rows, error_rows = parse_csv(form.file.data.stream.read())
+        except CSVError as exc:
+            flash(str(exc), "danger")
             return render_template("participants/import.html", form=form,
                                   columns=CSV_COLUMNS)
 
-        reader = csv.DictReader(io.StringIO(raw))
-        imported = skipped = errors = 0
-        error_rows = []
-        seen_in_file = set()
-
-        for line_no, row in enumerate(reader, start=2):  # row 1 = header
-            fn = (row.get("first_name") or "").strip()
-            ln = (row.get("last_name") or "").strip()
-            em = (row.get("email") or "").strip().lower()
-            dep = (row.get("department") or "").strip()
-
-            if not (fn and ln and em):
-                errors += 1
-                error_rows.append((line_no, "empty field (first name/last name/email)"))
-                continue
-            try:
-                validate_email(em, check_deliverability=False)
-            except EmailNotValidError:
-                errors += 1
-                error_rows.append((line_no, "invalid email format"))
-                continue
-            if em in seen_in_file or Participant.query.filter_by(email=em).first():
-                skipped += 1
-                continue
-
-            seen_in_file.add(em)
-            db.session.add(Participant(
-                first_name=fn, last_name=ln, email=em,
-                department=_find_or_create_department(dep), is_demo=False,
-            ))
-            imported += 1
-
+        _, imported = save_rows(rows)
+        skipped, errors = len(rows) - imported, len(error_rows)
         db.session.add(AuditLog(
             user_id=current_user.id, action="participant_import",
             detail=f"imported={imported} skipped={skipped} errors={errors}",
             ip_address=request.remote_addr))
         db.session.commit()
-        flash(f"Import finished: {imported} added, {skipped} duplicates, "
+        flash(f"Import finished: {imported} added, {skipped} already existed, "
               f"{errors} errors.", "success")
         return render_template("participants/import.html", form=CSVImportForm(),
                               columns=CSV_COLUMNS, done=True,
